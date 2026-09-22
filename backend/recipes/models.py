@@ -18,6 +18,9 @@ class Recipe(models.Model):
     cook_mins = models.PositiveIntegerField()
     tags = models.JSONField(default=list, blank=True)
 
+    def __str__(self):
+        return self.name
+
 
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(
