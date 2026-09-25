@@ -1,5 +1,12 @@
 from django.contrib import admin
-from .models import Recipe, Ingredient, RecipeIngredient, Nutrition, Substitution
+from .models import (
+    Ingredient,
+    IngredientNutrition,
+    Nutrition,
+    Recipe,
+    RecipeIngredient,
+    Substitution,
+)
 
 
 @admin.register(Ingredient)
@@ -7,6 +14,23 @@ class IngredientAdmin(admin.ModelAdmin):
     list_display = ("name", "category", "aliases")
     list_filter = ("category",)
     search_fields = ("name",)
+
+
+@admin.register(IngredientNutrition)
+class IngredientNutritionAdmin(admin.ModelAdmin):
+    list_display = (
+        "ingredient",
+        "serving_size_g",
+        "kcal",
+        "protein_g",
+        "carbs_g",
+        "fat_g",
+        "fiber_g",
+        "source",
+        "source_id",
+    )
+    list_filter = ("source",)
+    search_fields = ("ingredient__name", "source_id")
 
 
 class RecipeIngredientInline(admin.TabularInline):
