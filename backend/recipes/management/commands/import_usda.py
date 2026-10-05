@@ -2,6 +2,8 @@ import argparse
 import json
 import math
 import time
+from collections import namedtuple
+from datetime import date, datetime
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -17,14 +19,17 @@ SOURCE = "USDA FoodData Central"
 API_BASE_URL = "https://api.nal.usda.gov/fdc/v1"
 DEFAULT_TIMEOUT = 30
 DEFAULT_RETRIES = 3
+NAME_MAX_LENGTH = 255
 NUTRIENT_SPECS = {
     "kcal": ((2048, 2047, 1008), "kcal"),
     "protein_g": ((1003,), "g"),
     "carbs_g": ((1005,), "g"),
     "fat_g": ((1004,), "g"),
-    "fiber_g": ((1079,), "g"),
+    "fiber_g": ((1079, 2033), "g"),
 }
 NUTRIENT_FIELDS = ("kcal", "protein_g", "carbs_g", "fat_g", "fiber_g")
+
+UpsertResult = namedtuple("UpsertResult", ("created", "renamed", "name"))
 
 
 class USDAAPIError(Exception):
@@ -68,6 +73,31 @@ def collect_fdc_ids(fdc_ids=None, path=None, limit=None):
     return values[:limit] if limit else values
 
 
+def parse_description(food):
+    description = food.get("description")
+    if not isinstance(description, str) or not description.strip():
+        raise USDADataError("food description is required")
+    description = description.strip()
+    if len(description) > NAME_MAX_LENGTH:
+        raise USDADataError("food description exceeds the ingredient name limit")
+    return description
+
+
+def parse_publication_date(value):
+    """Accept both the API's ISO dates and the download files' M/D/YYYY."""
+    if not isinstance(value, str) or not value.strip():
+        return None
+    text = value.strip()
+    try:
+        return date.fromisoformat(text[:10])
+    except ValueError:
+        pass
+    try:
+        return datetime.strptime(text, "%m/%d/%Y").date()
+    except ValueError:
+        return None
+
+
 def parse_amount(entry, expected_unit):
     amount = entry.get("amount")
     if isinstance(amount, bool):
@@ -91,7 +121,13 @@ def parse_amount(entry, expected_unit):
     return amount
 
 
-def extract_nutrients(food):
+def extract_nutrients(food, required=NUTRIENT_FIELDS):
+    """Pull the tracked nutrients out of a food's foodNutrients list.
+
+    Every field in NUTRIENT_FIELDS is always returned. Fields listed in
+    ``required`` raise when missing or unusable, which is what the single food
+    API path wants; the rest come back as None so partial bulk records survive.
+    """
     entries = food.get("foodNutrients")
     if not isinstance(entries, list):
         raise USDADataError("foodNutrients must be a list")
@@ -122,10 +158,13 @@ def extract_nutrients(food):
                     last_error = exc
             if field in values:
                 break
-        if field not in values:
+        if field in values:
+            continue
+        if field in required:
             if last_error:
                 raise last_error
             missing.append(field)
+        values[field] = None
 
     if missing:
         raise USDADataError(f"missing nutrients: {', '.join(missing)}")
@@ -144,14 +183,11 @@ def parse_food(food, requested_fdc_id):
     if data_type and data_type != "Foundation":
         raise USDADataError(f"unsupported USDA data type: {data_type}")
 
-    description = food.get("description")
-    if not isinstance(description, str) or not description.strip():
-        raise USDADataError("food description is required")
-    description = description.strip()
-    if len(description) > 255:
-        raise USDADataError("food description exceeds the ingredient name limit")
-
-    return {"name": description, **extract_nutrients(food)}
+    return {
+        "name": parse_description(food),
+        "publication_date": parse_publication_date(food.get("publicationDate")),
+        **extract_nutrients(food),
+    }
 
 
 def find_nutrition(fdc_id):
@@ -162,23 +198,77 @@ def find_nutrition(fdc_id):
     )
 
 
-def upsert_food(parsed, fdc_id):
+def disambiguated_name(name, fdc_id):
+    """Suffix a description with its FDC ID so duplicates stay distinguishable."""
+    suffix = f" (FDC {fdc_id})"
+    return f"{name[: NAME_MAX_LENGTH - len(suffix)].rstrip()}{suffix}"
+
+
+def name_is_claimed(name):
+    """True when an ingredient already exists under this name with nutrition data."""
+    return Ingredient.objects.filter(name=name, nutrition__isnull=False).exists()
+
+
+def resolve_ingredient(name, fdc_id):
+    """Find or create the ingredient for a food, keeping its nutrition unambiguous.
+
+    USDA reuses some descriptions across distinct FDC IDs -- "Hummus, commercial"
+    exists in both Foundation (321358) and SR Legacy (174289) with slightly
+    different nutrients. Because ``Ingredient.name`` is unique, matching on name
+    alone would attach both records to one ingredient and leave two conflicting
+    nutrition rows, so the later record is stored under an "(FDC <id>)" name.
+    """
+    ingredient = Ingredient.objects.filter(name=name).first()
+    if ingredient is None:
+        return Ingredient.objects.create(name=name)
+    if not ingredient.nutrition.exists():
+        return ingredient
+    return Ingredient.objects.get_or_create(name=disambiguated_name(name, fdc_id))[0]
+
+
+def preview_name(name, fdc_id, claimed=None):
+    """The name a food would be stored under, without writing anything.
+
+    Mirrors :func:`resolve_ingredient` for ``--dry-run``. ``claimed`` holds the
+    names already planned during this run, which the database cannot know about
+    because nothing has been written yet.
+    """
+    if (claimed is not None and name in claimed) or name_is_claimed(name):
+        return disambiguated_name(name, fdc_id)
+    return name
+
+
+def upsert_food(parsed, fdc_id, category=None, publication_date=None):
+    """Store one parsed food.
+
+    Returns whether the nutrition row was created, whether a duplicate USDA
+    description had to be stored under a suffixed name, and the ingredient name
+    actually used.
+    """
     existing = find_nutrition(fdc_id)
     if existing:
         ingredient = existing.ingredient
+        renamed = False
     else:
-        ingredient, _ = Ingredient.objects.get_or_create(name=parsed["name"])
+        ingredient = resolve_ingredient(parsed["name"], fdc_id)
+        renamed = ingredient.name != parsed["name"]
+
+    if category and not ingredient.category:
+        ingredient.category = category
+        ingredient.save(update_fields=["category"])
+
+    defaults = {field: parsed[field] for field in NUTRIENT_FIELDS}
+    defaults["serving_size_g"] = 100
+    if publication_date is not None:
+        defaults["publication_date"] = publication_date
 
     _, was_created = IngredientNutrition.objects.update_or_create(
         ingredient=ingredient,
         source=SOURCE,
         source_id=str(fdc_id),
-        defaults={
-            **{field: parsed[field] for field in NUTRIENT_FIELDS},
-            "serving_size_g": 100,
-        },
+        defaults=defaults,
     )
-    return was_created
+    return UpsertResult(created=was_created, renamed=renamed, name=ingredient.name)
 
 
 class USDAClient:
@@ -305,19 +395,29 @@ class Command(BaseCommand):
                 parsed = parse_food(food, fdc_id)
                 if options["dry_run"]:
                     existing = find_nutrition(fdc_id)
-                    action = "update" if existing else "create"
-                    self.stdout.write(
-                        f"{fdc_id}: would {action} {parsed['name']}"
-                    )
                     if existing:
                         updated += 1
+                        label, action = existing.ingredient.name, "update"
                     else:
                         created += 1
+                        label = preview_name(parsed["name"], fdc_id)
+                        action = "create"
+                        if label != parsed["name"]:
+                            action = "create as"
+                    self.stdout.write(f"{fdc_id}: would {action} {label}")
                     continue
 
                 with transaction.atomic():
-                    was_created = upsert_food(parsed, fdc_id)
-                if was_created:
+                    result = upsert_food(
+                        parsed,
+                        fdc_id,
+                        publication_date=parsed.get("publication_date"),
+                    )
+                if result.renamed:
+                    self.stderr.write(
+                        f"{fdc_id}: duplicate description, stored as {result.name}"
+                    )
+                if result.created:
                     created += 1
                 else:
                     updated += 1

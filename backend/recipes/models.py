@@ -1,6 +1,13 @@
 from django.core.validators import MinValueValidator
 from django.db import models
 
+NUTRIENT_FIELDS = ("kcal", "protein_g", "carbs_g", "fat_g", "fiber_g")
+
+
+def nonnegative_or_null(field):
+    """Constraint helper: a value is fine as long as it is not negative."""
+    return models.Q(**{f"{field}__isnull": True}) | models.Q(**{f"{field}__gte": 0})
+
 
 class Ingredient(models.Model):
     name = models.CharField(max_length=255, unique=True)
@@ -15,14 +22,15 @@ class IngredientNutrition(models.Model):
     ingredient = models.ForeignKey(
         Ingredient, on_delete=models.CASCADE, related_name="nutrition"
     )
-    kcal = models.FloatField(validators=[MinValueValidator(0)])
-    protein_g = models.FloatField(validators=[MinValueValidator(0)])
-    carbs_g = models.FloatField(validators=[MinValueValidator(0)])
-    fat_g = models.FloatField(validators=[MinValueValidator(0)])
-    fiber_g = models.FloatField(default=0, validators=[MinValueValidator(0)])
+    kcal = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
+    protein_g = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
+    carbs_g = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
+    fat_g = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
+    fiber_g = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
     serving_size_g = models.FloatField(validators=[MinValueValidator(0)])
     source = models.CharField(max_length=200)
     source_id = models.CharField(max_length=200)
+    publication_date = models.DateField(null=True, blank=True)
 
     class Meta:
         constraints = [
@@ -31,12 +39,12 @@ class IngredientNutrition(models.Model):
                 name="unique_ingredient_nutrition_source",
             ),
             models.CheckConstraint(
-                condition=models.Q(kcal__gte=0)
-                & models.Q(protein_g__gte=0)
-                & models.Q(carbs_g__gte=0)
-                & models.Q(fat_g__gte=0)
-                & models.Q(fiber_g__gte=0)
-                & models.Q(serving_size_g__gt=0),
+                condition=models.Q(serving_size_g__gt=0)
+                & nonnegative_or_null("kcal")
+                & nonnegative_or_null("protein_g")
+                & nonnegative_or_null("carbs_g")
+                & nonnegative_or_null("fat_g")
+                & nonnegative_or_null("fiber_g"),
                 name="ingredient_nutrition_valid_values",
             ),
         ]

@@ -174,7 +174,7 @@ class Command(BaseCommand):
             try:
                 with transaction.atomic():
                     for record in batch:
-                        if upsert_food(record, record["fdc_id"]):
+                        if upsert_food(record, record["fdc_id"]).created:
                             batch_created += 1
                         else:
                             batch_updated += 1
