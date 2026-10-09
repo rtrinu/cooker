@@ -1,0 +1,917 @@
+[
+  {
+    "name": "Onion",
+    "aliases": ["onions", "yellow onion", "red onion", "white onion", "sweet onion"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Garlic",
+    "aliases": ["garlic cloves", "garlic clove", "fresh garlic", "garlic, raw"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Tomato",
+    "aliases": ["tomatoes", "roma tomato", "cherry tomatoes", "grape tomatoes", "diced tomatoes", "canned tomatoes"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Potato",
+    "aliases": ["potatoes", "russet potato", "yukon gold potato", "red potatoes", "baby potatoes"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Sweet potato",
+    "aliases": ["sweet potatoes", "yams"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Carrot",
+    "aliases": ["carrots", "baby carrots"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Celery",
+    "aliases": ["celery stalks", "celery rib", "celery ribs"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Broccoli",
+    "aliases": ["broccoli florets", "broccoli crowns"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Cauliflower",
+    "aliases": ["cauliflower florets", "cauliflower rice"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Bell pepper",
+    "aliases": ["bell peppers", "red bell pepper", "orange bell pepper", "yellow bell pepper", "green bell pepper", "capsicum"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Jalapeño",
+    "aliases": ["jalapeno", "jalapenos", "fresh jalapeno"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Spinach",
+    "aliases": ["baby spinach", "fresh spinach", "frozen spinach"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Kale",
+    "aliases": ["curly kale", "lacinato kale", "tuscan kale"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Lettuce",
+    "aliases": ["romaine lettuce", "iceberg lettuce", "mixed greens", "salad greens", "spring mix"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Cucumber",
+    "aliases": ["cucumbers", "english cucumber", "persian cucumber"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Zucchini",
+    "aliases": ["courgette", "summer squash"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Butternut squash",
+    "aliases": ["butternut", "butternut squash cubes"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Pumpkin",
+    "aliases": ["pumpkin puree", "canned pumpkin", "fresh pumpkin"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Corn",
+    "aliases": ["corn kernels", "sweet corn", "frozen corn", "corn on the cob"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Peas",
+    "aliases": ["green peas", "frozen peas", "petit pois", "sweet peas"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Green beans",
+    "aliases": ["string beans", "snap beans", "haricots verts", "french beans"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Mushroom",
+    "aliases": ["mushrooms", "cremini mushrooms", "button mushrooms", "portobello", "baby bella"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Asparagus",
+    "aliases": ["asparagus spears"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Cabbage",
+    "aliases": ["green cabbage", "red cabbage", "napa cabbage", "savoy cabbage"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Brussels sprouts",
+    "aliases": ["brussel sprouts"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Eggplant",
+    "aliases": ["aubergine", "globe eggplant"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Leek",
+    "aliases": ["leeks"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Scallion",
+    "aliases": ["scallions", "green onions", "spring onions"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Shallot",
+    "aliases": ["shallots", "eschalot"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Tomato paste",
+    "aliases": ["tomato puree", "concentrated tomato paste"],
+    "category": "Vegetables and Vegetable Products"
+  },
+  {
+    "name": "Apple",
+    "aliases": ["apples", "granny smith apple", "honeycrisp apple", "gala apple"],
+    "category": "Fruits and Fruit Juices"
+  },
+  {
+    "name": "Banana",
+    "aliases": ["bananas", "ripe banana", "frozen banana"],
+    "category": "Fruits and Fruit Juices"
+  },
+  {
+    "name": "Orange",
+    "aliases": ["oranges", "navel orange", "mandarin orange", "clementine", "tangerine"],
+    "category": "Fruits and Fruit Juices"
+  },
+  {
+    "name": "Lemon",
+    "aliases": ["lemons", "lemon juice", "lemon zest", "fresh lemon"],
+    "category": "Fruits and Fruit Juices"
+  },
+  {
+    "name": "Lime",
+    "aliases": ["limes", "lime juice", "lime zest", "fresh lime"],
+    "category": "Fruits and Fruit Juices"
+  },
+  {
+    "name": "Strawberry",
+    "aliases": ["strawberries", "fresh strawberries", "frozen strawberries"],
+    "category": "Fruits and Fruit Juices"
+  },
+  {
+    "name": "Blueberry",
+    "aliases": ["blueberries", "fresh blueberries", "frozen blueberries"],
+    "category": "Fruits and Fruit Juices"
+  },
+  {
+    "name": "Raspberry",
+    "aliases": ["raspberries", "fresh raspberries"],
+    "category": "Fruits and Fruit Juices"
+  },
+  {
+    "name": "Blackberry",
+    "aliases": ["blackberries"],
+    "category": "Fruits and Fruit Juices"
+  },
+  {
+    "name": "Grapes",
+    "aliases": ["grapes", "red grapes", "green grapes"],
+    "category": "Fruits and Fruit Juices"
+  },
+  {
+    "name": "Watermelon",
+    "aliases": ["watermelon chunks"],
+    "category": "Fruits and Fruit Juices"
+  },
+  {
+    "name": "Mango",
+    "aliases": ["mangoes", "fresh mango", "frozen mango"],
+    "category": "Fruits and Fruit Juices"
+  },
+  {
+    "name": "Pineapple",
+    "aliases": ["fresh pineapple", "pineapple chunks", "pineapple rings"],
+    "category": "Fruits and Fruit Juices"
+  },
+  {
+    "name": "Peach",
+    "aliases": ["peaches", "fresh peaches", "canned peaches", "frozen peaches"],
+    "category": "Fruits and Fruit Juices"
+  },
+  {
+    "name": "Pear",
+    "aliases": ["pears", "bosc pear", "anjou pear"],
+    "category": "Fruits and Fruit Juices"
+  },
+  {
+    "name": "Cherry",
+    "aliases": ["cherries", "sweet cherries", "frozen cherries"],
+    "category": "Fruits and Fruit Juices"
+  },
+  {
+    "name": "Avocado",
+    "aliases": ["avocados", "hass avocado", "ripe avocado"],
+    "category": "Fruits and Fruit Juices"
+  },
+  {
+    "name": "Coconut",
+    "aliases": ["shredded coconut", "unsweetened coconut", "desiccated coconut", "coconut flakes"],
+    "category": "Fruits and Fruit Juices"
+  },
+  {
+    "name": "Orange juice",
+    "aliases": ["oj", "fresh orange juice"],
+    "category": "Fruits and Fruit Juices"
+  },
+  {
+    "name": "White rice",
+    "aliases": ["long grain rice", "white long grain rice", "jasmine rice", "basmati rice"],
+    "category": "Cereal Grains and Pasta"
+  },
+  {
+    "name": "Brown rice",
+    "aliases": ["brown long grain rice"],
+    "category": "Cereal Grains and Pasta"
+  },
+  {
+    "name": "Rolled oats",
+    "aliases": ["oats", "old fashioned oats", "oatmeal", "porridge oats", "quick oats", "instant oats"],
+    "category": "Cereal Grains and Pasta"
+  },
+  {
+    "name": "All-purpose flour",
+    "aliases": ["plain flour", "white flour", "ap flour", "all purpose flour"],
+    "category": "Cereal Grains and Pasta"
+  },
+  {
+    "name": "Whole wheat flour",
+    "aliases": ["wholemeal flour", "whole grain flour", "wholewheat flour"],
+    "category": "Cereal Grains and Pasta"
+  },
+  {
+    "name": "Quinoa",
+    "aliases": ["tri color quinoa", "white quinoa"],
+    "category": "Cereal Grains and Pasta"
+  },
+  {
+    "name": "Pasta",
+    "aliases": ["spaghetti", "penne", "rigatoni", "fusilli", "macaroni", "noodles", "egg noodles", "farfalle", "linguine", "fettuccine"],
+    "category": "Cereal Grains and Pasta"
+  },
+  {
+    "name": "Black beans",
+    "aliases": ["black beans", "canned black beans", "dried black beans"],
+    "category": "Legumes and Legume Products"
+  },
+  {
+    "name": "Kidney beans",
+    "aliases": ["red kidney beans", "canned kidney beans"],
+    "category": "Legumes and Legume Products"
+  },
+  {
+    "name": "Pinto beans",
+    "aliases": ["pinto beans", "canned pinto beans"],
+    "category": "Legumes and Legume Products"
+  },
+  {
+    "name": "White beans",
+    "aliases": ["cannellini beans", "great northern beans", "navy beans"],
+    "category": "Legumes and Legume Products"
+  },
+  {
+    "name": "Chickpeas",
+    "aliases": ["garbanzo beans", "garbanzos", "canned chickpeas", "chick pea"],
+    "category": "Legumes and Legume Products"
+  },
+  {
+    "name": "Lentils",
+    "aliases": ["lentil", "red lentils", "green lentils", "brown lentils", "french lentils"],
+    "category": "Legumes and Legume Products"
+  },
+  {
+    "name": "Tofu",
+    "aliases": ["firm tofu", "extra firm tofu", "silken tofu", "soft tofu"],
+    "category": "Legumes and Legume Products"
+  },
+  {
+    "name": "Peanut",
+    "aliases": ["peanuts", "dry roasted peanuts", "raw peanuts"],
+    "category": "Legumes and Legume Products"
+  },
+  {
+    "name": "Peanut butter",
+    "aliases": ["smooth peanut butter", "crunchy peanut butter", "natural peanut butter"],
+    "category": "Legumes and Legume Products"
+  },
+  {
+    "name": "Hummus",
+    "aliases": ["hummus", "plain hummus", "roasted garlic hummus"],
+    "category": "Legumes and Legume Products"
+  },
+  {
+    "name": "Miso",
+    "aliases": ["miso paste", "white miso", "red miso"],
+    "category": "Legumes and Legume Products"
+  },
+  {
+    "name": "Almond",
+    "aliases": ["almonds", "whole almonds", "sliced almonds", "slivered almonds", "almond flour", "ground almonds"],
+    "category": "Nut and Seed Products"
+  },
+  {
+    "name": "Walnut",
+    "aliases": ["walnuts", "chopped walnuts", "walnut pieces"],
+    "category": "Nut and Seed Products"
+  },
+  {
+    "name": "Pecan",
+    "aliases": ["pecans", "chopped pecans", "pecan halves"],
+    "category": "Nut and Seed Products"
+  },
+  {
+    "name": "Cashew",
+    "aliases": ["cashews", "cashew pieces", "raw cashews"],
+    "category": "Nut and Seed Products"
+  },
+  {
+    "name": "Pistachio",
+    "aliases": ["pistachios", "shelled pistachios"],
+    "category": "Nut and Seed Products"
+  },
+  {
+    "name": "Hazelnut",
+    "aliases": ["hazelnuts", "filberts"],
+    "category": "Nut and Seed Products"
+  },
+  {
+    "name": "Chia seeds",
+    "aliases": ["chia seed", "ground chia"],
+    "category": "Nut and Seed Products"
+  },
+  {
+    "name": "Flaxseed",
+    "aliases": ["flax seeds", "ground flaxseed", "linseed", "flax meal"],
+    "category": "Nut and Seed Products"
+  },
+  {
+    "name": "Sesame seeds",
+    "aliases": ["sesame", "toasted sesame seeds", "white sesame seeds"],
+    "category": "Nut and Seed Products"
+  },
+  {
+    "name": "Pumpkin seeds",
+    "aliases": ["pepitas", "pumpkin kernels"],
+    "category": "Nut and Seed Products"
+  },
+  {
+    "name": "Almond butter",
+    "aliases": ["almond butter", "creamy almond butter"],
+    "category": "Nut and Seed Products"
+  },
+  {
+    "name": "Milk",
+    "aliases": ["milk", "whole milk", "2% milk", "skim milk", "low fat milk", "lowfat milk"],
+    "category": "Dairy and Egg Products"
+  },
+  {
+    "name": "Almond milk",
+    "aliases": ["almond milk", "unsweetened almond milk"],
+    "category": "Dairy and Egg Products"
+  },
+  {
+    "name": "Coconut milk",
+    "aliases": ["coconut milk", "canned coconut milk", "light coconut milk"],
+    "category": "Dairy and Egg Products"
+  },
+  {
+    "name": "Oat milk",
+    "aliases": ["oat milk", "barista oat milk"],
+    "category": "Dairy and Egg Products"
+  },
+  {
+    "name": "Soy milk",
+    "aliases": ["soymilk", "soy beverage"],
+    "category": "Dairy and Egg Products"
+  },
+  {
+    "name": "Heavy cream",
+    "aliases": ["heavy whipping cream", "whipping cream", "double cream"],
+    "category": "Dairy and Egg Products"
+  },
+  {
+    "name": "Butter",
+    "aliases": ["butter", "unsalted butter", "salted butter", "butter sticks"],
+    "category": "Dairy and Egg Products"
+  },
+  {
+    "name": "Ghee",
+    "aliases": ["clarified butter"],
+    "category": "Dairy and Egg Products"
+  },
+  {
+    "name": "Eggs",
+    "aliases": ["eggs", "egg", "large eggs", "egg whites", "egg yolks", "whole eggs"],
+    "category": "Dairy and Egg Products"
+  },
+  {
+    "name": "Yogurt",
+    "aliases": ["greek yogurt", "plain yogurt", "greek yoghurt", "natural yoghurt", "strained yogurt"],
+    "category": "Dairy and Egg Products"
+  },
+  {
+    "name": "Sour cream",
+    "aliases": ["creme fraiche", "crème fraîche"],
+    "category": "Dairy and Egg Products"
+  },
+  {
+    "name": "Cream cheese",
+    "aliases": ["soft cream cheese"],
+    "category": "Dairy and Egg Products"
+  },
+  {
+    "name": "Cheddar cheese",
+    "aliases": ["sharp cheddar", "mild cheddar", "shredded cheddar", "mature cheddar"],
+    "category": "Dairy and Egg Products"
+  },
+  {
+    "name": "Mozzarella",
+    "aliases": ["fresh mozzarella", "shredded mozzarella", "buffalo mozzarella"],
+    "category": "Dairy and Egg Products"
+  },
+  {
+    "name": "Parmesan cheese",
+    "aliases": ["parmesan", "parmigiano reggiano", "grated parmesan"],
+    "category": "Dairy and Egg Products"
+  },
+  {
+    "name": "Feta cheese",
+    "aliases": ["feta", "crumbled feta"],
+    "category": "Dairy and Egg Products"
+  },
+  {
+    "name": "Ricotta cheese",
+    "aliases": ["ricotta", "whole milk ricotta"],
+    "category": "Dairy and Egg Products"
+  },
+  {
+    "name": "Buttermilk",
+    "aliases": ["buttermilk"],
+    "category": "Dairy and Egg Products"
+  },
+  {
+    "name": "Protein powder",
+    "aliases": ["whey protein", "whey protein powder", "vegan protein powder", "plant protein powder"],
+    "category": "Dairy and Egg Products"
+  },
+  {
+    "name": "Chicken breast",
+    "aliases": ["chicken breasts", "boneless chicken breast", "boneless skinless chicken breast"],
+    "category": "Poultry Products"
+  },
+  {
+    "name": "Chicken thigh",
+    "aliases": ["chicken thighs", "boneless chicken thighs"],
+    "category": "Poultry Products"
+  },
+  {
+    "name": "Whole chicken",
+    "aliases": ["roast chicken", "roasting chicken", "whole roasting chicken", "rotisserie chicken"],
+    "category": "Poultry Products"
+  },
+  {
+    "name": "Ground turkey",
+    "aliases": ["turkey mince", "minced turkey"],
+    "category": "Poultry Products"
+  },
+  {
+    "name": "Turkey breast",
+    "aliases": ["turkey breast strips"],
+    "category": "Poultry Products"
+  },
+  {
+    "name": "Ground beef",
+    "aliases": ["minced beef", "ground chuck", "ground sirloin", "beef mince", "ground meat"],
+    "category": "Beef Products"
+  },
+  {
+    "name": "Beef steak",
+    "aliases": ["ribeye", "ribeye steak", "sirloin steak", "strip steak", "flank steak", "skirt steak"],
+    "category": "Beef Products"
+  },
+  {
+    "name": "Beef roast",
+    "aliases": ["beef chuck", "chuck roast", "pot roast", "beef brisket", "brisket"],
+    "category": "Beef Products"
+  },
+  {
+    "name": "Pork chop",
+    "aliases": ["pork chops", "boneless pork chops"],
+    "category": "Pork Products"
+  },
+  {
+    "name": "Pork loin",
+    "aliases": ["center cut pork loin"],
+    "category": "Pork Products"
+  },
+  {
+    "name": "Pork shoulder",
+    "aliases": ["pork butt", "boston butt", "pork picnic"],
+    "category": "Pork Products"
+  },
+  {
+    "name": "Ground pork",
+    "aliases": ["minced pork", "pork mince"],
+    "category": "Pork Products"
+  },
+  {
+    "name": "Bacon",
+    "aliases": ["bacon strips", "center cut bacon", "thick cut bacon"],
+    "category": "Pork Products"
+  },
+  {
+    "name": "Ham",
+    "aliases": ["deli ham", "smoked ham"],
+    "category": "Pork Products"
+  },
+  {
+    "name": "Sausage",
+    "aliases": ["pork sausage", "italian sausage", "breakfast sausage", "chicken sausage", "turkey sausage", "ground sausage"],
+    "category": "Pork Products"
+  },
+  {
+    "name": "Lamb",
+    "aliases": ["ground lamb", "lamb chops", "lamb shoulder", "lamb leg", "lamb stew meat"],
+    "category": "Lamb, Veal, and Game Products"
+  },
+  {
+    "name": "Salmon",
+    "aliases": ["salmon fillet", "salmon filets", "atlantic salmon", "wild salmon", "salmon steak"],
+    "category": "Finfish and Shellfish Products"
+  },
+  {
+    "name": "Tuna",
+    "aliases": ["canned tuna", "tuna steak", "albacore tuna", "tuna in water", "tuna in oil"],
+    "category": "Finfish and Shellfish Products"
+  },
+  {
+    "name": "Cod",
+    "aliases": ["cod fillets", "atlantic cod", "fresh cod"],
+    "category": "Finfish and Shellfish Products"
+  },
+  {
+    "name": "Shrimp",
+    "aliases": ["prawns", "peeled shrimp", "jumbo shrimp", "raw shrimp", "frozen shrimp"],
+    "category": "Finfish and Shellfish Products"
+  },
+  {
+    "name": "Scallops",
+    "aliases": ["sea scallops", "bay scallops"],
+    "category": "Finfish and Shellfish Products"
+  },
+  {
+    "name": "Crab",
+    "aliases": ["crab meat", "lump crab meat", "lump crab"],
+    "category": "Finfish and Shellfish Products"
+  },
+  {
+    "name": "Anchovies",
+    "aliases": ["anchovy fillets"],
+    "category": "Finfish and Shellfish Products"
+  },
+  {
+    "name": "Salt",
+    "aliases": ["kosher salt", "sea salt", "table salt", "fine sea salt", "flaky salt"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Black pepper",
+    "aliases": ["ground black pepper", "black peppercorns", "freshly ground pepper", "white pepper"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Cayenne pepper",
+    "aliases": ["cayenne", "ground cayenne", "cayenne powder"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Red pepper flakes",
+    "aliases": ["crushed red pepper", "chili flakes", "red chili flakes"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Paprika",
+    "aliases": ["smoked paprika", "sweet paprika", "hungarian paprika", "hot paprika"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Chili powder",
+    "aliases": ["chili seasoning", "ancho chili powder"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Cumin",
+    "aliases": ["ground cumin", "cumin seeds"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Coriander",
+    "aliases": ["ground coriander", "coriander seeds"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Cilantro",
+    "aliases": ["fresh cilantro", "coriander leaves", "cilantro leaves"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Parsley",
+    "aliases": ["fresh parsley", "italian parsley", "flat leaf parsley", "curly parsley", "dried parsley"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Basil",
+    "aliases": ["fresh basil", "basil leaves", "sweet basil", "dried basil"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Oregano",
+    "aliases": ["dried oregano", "fresh oregano", "greek oregano"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Thyme",
+    "aliases": ["fresh thyme", "dried thyme", "thyme sprigs", "lemon thyme"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Rosemary",
+    "aliases": ["fresh rosemary", "dried rosemary", "rosemary sprigs"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Sage",
+    "aliases": ["fresh sage", "dried sage", "sage leaves"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Mint",
+    "aliases": ["fresh mint", "mint leaves", "spearmint", "peppermint"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Dill",
+    "aliases": ["fresh dill", "dried dill", "dill weed"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Bay leaf",
+    "aliases": ["bay leaves", "dried bay leaves"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Cinnamon",
+    "aliases": ["ground cinnamon", "cinnamon sticks", "ceylon cinnamon"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Nutmeg",
+    "aliases": ["ground nutmeg", "whole nutmeg", "fresh nutmeg"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Cloves",
+    "aliases": ["ground cloves", "whole cloves"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Ginger",
+    "aliases": ["fresh ginger", "ginger root", "ground ginger", "grated ginger"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Turmeric",
+    "aliases": ["ground turmeric", "fresh turmeric", "turmeric root"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Curry powder",
+    "aliases": ["curry seasoning", "madras curry powder"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Garlic powder",
+    "aliases": ["granulated garlic", "garlic granules"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "White vinegar",
+    "aliases": ["distilled vinegar", "distilled white vinegar"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Apple cider vinegar",
+    "aliases": ["acv", "cider vinegar"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Balsamic vinegar",
+    "aliases": ["balsamic"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Red wine vinegar",
+    "aliases": ["red vinegar"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Rice vinegar",
+    "aliases": ["rice wine vinegar", "seasoned rice vinegar"],
+    "category": "Spices and Herbs"
+  },
+  {
+    "name": "Olive oil",
+    "aliases": ["extra virgin olive oil", "evoo", "olive oil, extra virgin"],
+    "category": "Fats and Oils"
+  },
+  {
+    "name": "Vegetable oil",
+    "aliases": ["canola oil", "sunflower oil", "safflower oil", "neutral oil"],
+    "category": "Fats and Oils"
+  },
+  {
+    "name": "Coconut oil",
+    "aliases": ["refined coconut oil", "virgin coconut oil"],
+    "category": "Fats and Oils"
+  },
+  {
+    "name": "Avocado oil",
+    "aliases": ["avocado oil spray"],
+    "category": "Fats and Oils"
+  },
+  {
+    "name": "Sesame oil",
+    "aliases": ["toasted sesame oil", "dark sesame oil"],
+    "category": "Fats and Oils"
+  },
+  {
+    "name": "Peanut oil",
+    "aliases": ["groundnut oil"],
+    "category": "Fats and Oils"
+  },
+  {
+    "name": "Mayonnaise",
+    "aliases": ["mayo", "vegan mayo"],
+    "category": "Fats and Oils"
+  },
+  {
+    "name": "Sugar",
+    "aliases": ["granulated sugar", "white sugar", "cane sugar", "regular sugar"],
+    "category": "Sweets"
+  },
+  {
+    "name": "Brown sugar",
+    "aliases": ["light brown sugar", "dark brown sugar", "packed brown sugar"],
+    "category": "Sweets"
+  },
+  {
+    "name": "Powdered sugar",
+    "aliases": ["confectioners sugar", "confectioner's sugar", "icing sugar"],
+    "category": "Sweets"
+  },
+  {
+    "name": "Honey",
+    "aliases": ["raw honey", "liquid honey", "runny honey"],
+    "category": "Sweets"
+  },
+  {
+    "name": "Maple syrup",
+    "aliases": ["pure maple syrup", "real maple syrup"],
+    "category": "Sweets"
+  },
+  {
+    "name": "Chocolate",
+    "aliases": ["dark chocolate", "semisweet chocolate", "bittersweet chocolate", "chocolate chips", "baking chocolate"],
+    "category": "Sweets"
+  },
+  {
+    "name": "Cocoa powder",
+    "aliases": ["unsweetened cocoa", "dutch process cocoa", "dutch processed cocoa", "cacao powder"],
+    "category": "Sweets"
+  },
+  {
+    "name": "Vanilla extract",
+    "aliases": ["vanilla", "pure vanilla extract", "vanilla essence", "vanilla bean paste"],
+    "category": "Sweets"
+  },
+  {
+    "name": "Jam",
+    "aliases": ["jelly", "fruit preserves", "strawberry jam", "raspberry jam", "marmalade"],
+    "category": "Sweets"
+  },
+  {
+    "name": "Bread",
+    "aliases": ["whole wheat bread", "sourdough bread", "sandwich bread", "sliced bread", "white bread", "crusty bread"],
+    "category": "Baked Products"
+  },
+  {
+    "name": "Breadcrumbs",
+    "aliases": ["panko", "panko breadcrumbs", "bread crumbs", "dried breadcrumbs"],
+    "category": "Baked Products"
+  },
+  {
+    "name": "Tortilla",
+    "aliases": ["flour tortillas", "corn tortillas"],
+    "category": "Baked Products"
+  },
+  {
+    "name": "Coffee",
+    "aliases": ["brewed coffee", "espresso", "instant coffee", "strong coffee"],
+    "category": "Beverages"
+  },
+  {
+    "name": "Tea",
+    "aliases": ["black tea", "green tea", "tea bags", "brewed tea", "chai tea"],
+    "category": "Beverages"
+  },
+  {
+    "name": "Red wine",
+    "aliases": ["dry red wine"],
+    "category": "Beverages"
+  },
+  {
+    "name": "Chicken stock",
+    "aliases": ["chicken broth", "low sodium chicken broth", "chicken bouillon"],
+    "category": "Soups, Sauces, and Gravies"
+  },
+  {
+    "name": "Vegetable stock",
+    "aliases": ["vegetable broth", "veggie broth"],
+    "category": "Soups, Sauces, and Gravies"
+  },
+  {
+    "name": "Beef stock",
+    "aliases": ["beef broth"],
+    "category": "Soups, Sauces, and Gravies"
+  },
+  {
+    "name": "Soy sauce",
+    "aliases": ["low sodium soy sauce", "tamari", "shoyu", "light soy sauce"],
+    "category": "Soups, Sauces, and Gravies"
+  },
+  {
+    "name": "Fish sauce",
+    "aliases": ["nam pla"],
+    "category": "Soups, Sauces, and Gravies"
+  },
+  {
+    "name": "Worcestershire sauce",
+    "aliases": ["worcestershire"],
+    "category": "Soups, Sauces, and Gravies"
+  },
+  {
+    "name": "Hot sauce",
+    "aliases": ["sriracha", "tabasco", "red chili sauce"],
+    "category": "Soups, Sauces, and Gravies"
+  },
+  {
+    "name": "Mustard",
+    "aliases": ["dijon mustard", "yellow mustard", "whole grain mustard", "english mustard"],
+    "category": "Soups, Sauces, and Gravies"
+  },
+  {
+    "name": "Ketchup",
+    "aliases": ["tomato ketchup", "catsup"],
+    "category": "Soups, Sauces, and Gravies"
+  },
+  {
+    "name": "Marinara sauce",
+    "aliases": ["marinara", "tomato pasta sauce", "pasta sauce"],
+    "category": "Soups, Sauces, and Gravies"
+  },
+  {
+    "name": "Pesto",
+    "aliases": ["basil pesto"],
+    "category": "Soups, Sauces, and Gravies"
+  }
+]

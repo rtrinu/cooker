@@ -1053,3 +1053,163 @@ class USDABulkImportTests(BulkDatasetMixin, TestCase):
         renamed = Ingredient.objects.exclude(name=base).get()
         self.assertLessEqual(len(renamed.name), NAME_MAX_LENGTH)
         self.assertTrue(renamed.name.endswith("(FDC 124)"))
+
+
+class LoadIngredientsTests(NutritionFactoryMixin, TestCase):
+    def write_fixture(self, records, directory):
+        path = directory / "ingredients.json"
+        path.write_text(json.dumps(records), encoding="utf-8")
+        return path
+
+    def load(self, path, *args, stdout=None, stderr=None):
+        return call_command(
+            "load_ingredients",
+            "--file",
+            str(path),
+            *args,
+            stdout=stdout or StringIO(),
+            stderr=stderr or StringIO(),
+        )
+
+    def test_creates_ingredients_with_aliases_and_category(self):
+        with TemporaryDirectory() as tmp:
+            path = self.write_fixture(
+                [
+                    {
+                        "name": "Onion",
+                        "aliases": ["Onions", "yellow onion", "YELLOW ONION"],
+                        "category": "Vegetables and Vegetable Products",
+                    },
+                    {
+                        "name": "Garlic",
+                        "aliases": ["garlic cloves"],
+                        "category": "  Vegetables and Vegetable Products  ",
+                    },
+                ],
+                Path(tmp),
+            )
+            output = StringIO()
+            self.load(path, stdout=output)
+
+        onion = Ingredient.objects.get(name="Onion")
+        self.assertEqual(onion.aliases, ["onions", "yellow onion"])
+        self.assertEqual(onion.category, "Vegetables and Vegetable Products")
+        garlic = Ingredient.objects.get(name="Garlic")
+        self.assertEqual(garlic.aliases, ["garlic cloves"])
+        self.assertEqual(garlic.category, "Vegetables and Vegetable Products")
+        self.assertIn("created=2", output.getvalue())
+
+    def test_updates_existing_ingredient_and_keeps_nutrition(self):
+        ingredient = Ingredient.objects.create(
+            name="Onion", category="Old Category"
+        )
+        self.create_nutrition(ingredient=ingredient)
+
+        with TemporaryDirectory() as tmp:
+            path = self.write_fixture(
+                [
+                    {
+                        "name": "Onion",
+                        "aliases": ["onions"],
+                        "category": "Vegetables and Vegetable Products",
+                    }
+                ],
+                Path(tmp),
+            )
+            self.load(path)
+
+        ingredient.refresh_from_db()
+        self.assertEqual(ingredient.category, "Vegetables and Vegetable Products")
+        self.assertEqual(ingredient.aliases, ["onions"])
+        self.assertEqual(ingredient.nutrition.count(), 1)
+
+    def test_omitted_category_is_left_untouched(self):
+        Ingredient.objects.create(name="Onion")
+
+        with TemporaryDirectory() as tmp:
+            path = self.write_fixture(
+                [{"name": "Onion", "aliases": ["onions"]}], Path(tmp)
+            )
+            self.load(path)
+
+        self.assertEqual(Ingredient.objects.get(name="Onion").category, "")
+
+    def test_dry_run_writes_nothing(self):
+        with TemporaryDirectory() as tmp:
+            path = self.write_fixture(
+                [
+                    {
+                        "name": "Onion",
+                        "aliases": ["onions"],
+                        "category": "Vegetables",
+                    },
+                    {
+                        "name": "Garlic",
+                        "aliases": ["garlic"],
+                        "category": "Spices",
+                    },
+                ],
+                Path(tmp),
+            )
+            output = StringIO()
+            self.load(path, "--dry-run", stdout=output)
+
+        self.assertEqual(Ingredient.objects.count(), 0)
+        self.assertIn("would create Onion", output.getvalue())
+        self.assertIn("dry run: created=2 updated=0", output.getvalue())
+
+    def test_invalid_file_raises(self):
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "ingredients.json"
+            path.write_text("{not json", encoding="utf-8")
+            with self.assertRaises(CommandError):
+                self.load(path)
+
+    def test_invalid_entry_is_rejected_without_writing(self):
+        with TemporaryDirectory() as tmp:
+            path = self.write_fixture(
+                [
+                    {
+                        "name": "Onion",
+                        "aliases": "onions",
+                        "category": "Vegetables",
+                    },
+                    {
+                        "name": "Garlic",
+                        "aliases": ["garlic"],
+                        "category": "Spices",
+                    },
+                ],
+                Path(tmp),
+            )
+            stderr = StringIO()
+            with self.assertRaises(CommandError):
+                self.load(path, stderr=stderr)
+
+        self.assertEqual(Ingredient.objects.count(), 0)
+        self.assertIn("entry 1: skipped", stderr.getvalue())
+
+    def test_duplicate_names_are_rejected(self):
+        with TemporaryDirectory() as tmp:
+            path = self.write_fixture(
+                [
+                    {"name": "Onion", "aliases": ["onions"]},
+                    {"name": "Onion", "aliases": ["yellow onion"]},
+                ],
+                Path(tmp),
+            )
+            with self.assertRaises(CommandError):
+                self.load(path)
+
+        self.assertEqual(Ingredient.objects.count(), 0)
+
+    def test_ships_a_loadable_curated_fixture(self):
+        call_command("load_ingredients", stdout=StringIO())
+
+        names = list(Ingredient.objects.values_list("name", flat=True))
+        self.assertGreater(len(names), 100)
+        self.assertEqual(len(names), len(set(names)))
+        for ingredient in Ingredient.objects.only("aliases", "category"):
+            self.assertLessEqual(len(ingredient.category), 50)
+            self.assertTrue(ingredient.aliases)
+            self.assertEqual(len(ingredient.aliases), len(set(ingredient.aliases)))
