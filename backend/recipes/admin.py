@@ -61,6 +61,8 @@ class RecipeAdmin(admin.ModelAdmin):
 
     @admin.display(description="total time")
     def total_time(self, obj):
+        if obj.prep_mins is None or obj.cook_mins is None:
+            return "\u2014"
         return f"{obj.prep_mins + obj.cook_mins} min"
 
     @admin.display(description="kcal")

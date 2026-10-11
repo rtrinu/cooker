@@ -1,5 +1,6 @@
 import json
 import zipfile
+from collections import namedtuple
 from datetime import date
 from io import StringIO
 from pathlib import Path
@@ -19,13 +20,27 @@ from .management.commands.import_usda import (
     name_is_claimed,
     preview_name,
     resolve_ingredient,
+    sync_measures,
 )
 from .management.commands.usda_bulk import (
     iter_foods,
     open_dataset,
     parse_bulk_food,
+    parse_portions,
 )
-from .models import Ingredient, IngredientNutrition
+from .models import (
+    Ingredient,
+    IngredientMeasure,
+    IngredientNutrition,
+    Nutrition,
+    Recipe,
+    RecipeIngredient,
+)
+from .nutrition import compute, scale_nutrients
+from .pdf import extract_recipe, split_quantity
+from .units import grams_for, normalize_measure, parse_amount
+
+Measure = namedtuple("Measure", ("measure", "amount", "gram_weight"))
 
 
 class NutritionFactoryMixin:
@@ -148,6 +163,454 @@ class IngredientNutritionTests(NutritionFactoryMixin, TestCase):
     def test_invalid_nutrition_is_rejected_by_database_constraint(self):
         with self.assertRaises(IntegrityError), transaction.atomic():
             self.create_nutrition(serving_size_g=0)
+
+
+class NormalizeMeasureTests(TestCase):
+    def test_reads_the_unit_that_opens_the_label(self):
+        self.assertEqual(normalize_measure("cup, chopped"), "cup")
+        self.assertEqual(normalize_measure("tbsp"), "tbsp")
+
+    def test_prefers_the_opening_unit_over_a_later_approximation(self):
+        self.assertEqual(normalize_measure("oz (approx 2/3 cup)"), "oz")
+        self.assertEqual(normalize_measure("cup (8 fl oz)"), "cup")
+
+    def test_reads_a_two_word_unit(self):
+        self.assertEqual(normalize_measure("fluid ounce"), "fl oz")
+        self.assertEqual(normalize_measure("fl oz"), "fl oz")
+
+    def test_normalizes_plural_spellings(self):
+        self.assertEqual(normalize_measure("tablespoons"), "tbsp")
+        self.assertEqual(normalize_measure("slices"), "slice")
+
+    def test_drops_a_reference_amount(self):
+        self.assertIsNone(normalize_measure("RACC"))
+
+    def test_drops_a_label_that_opens_with_no_unit(self):
+        self.assertIsNone(normalize_measure("unit (yield from 1 lb chicken)"))
+        self.assertIsNone(normalize_measure("breast, bone and skin removed"))
+
+    def test_drops_a_label_describing_a_portion_rather_than_a_measure(self):
+        # The dataset reports amount=0.12 for this portion, not 0.5, so reading
+        # it as half a cup would overstate the weight tenfold.
+        self.assertIsNone(normalize_measure("serving 1/2 cup"))
+
+    def test_does_not_strip_a_leading_quantity(self):
+        # Only a unit opening the label can be trusted to describe ``amount``.
+        self.assertIsNone(normalize_measure("1/2 cup"))
+        self.assertIsNone(normalize_measure("5.3 oz"))
+
+    def test_handles_blank_labels(self):
+        self.assertIsNone(normalize_measure(""))
+        self.assertIsNone(normalize_measure(None))
+
+
+class ParsePortionsTests(TestCase):
+    def portions(self, **overrides):
+        portion = {
+            "amount": 1.0,
+            "gramWeight": 152.0,
+            "sequenceNumber": 2,
+            "modifier": "",
+            "portionDescription": "",
+            "measureUnit": {"id": 1000, "name": "cup", "abbreviation": "cup"},
+        }
+        portion.update(overrides)
+        return {"foodPortions": [portion]}
+
+    def test_reads_the_unit_from_the_measure_unit(self):
+        record = parse_portions(self.portions())[0]
+
+        self.assertEqual(record["measure"], "cup")
+        self.assertEqual(record["source_label"], "cup")
+        self.assertEqual(record["amount"], 1.0)
+        self.assertEqual(record["gram_weight"], 152.0)
+        self.assertEqual(record["sequence"], 2)
+
+    def test_reads_the_unit_from_the_sr_modifier(self):
+        record = parse_portions(
+            self.portions(
+                modifier="tbsp",
+                portionDescription=None,
+                measureUnit={"id": 1001, "name": "undetermined", "abbreviation": None},
+            )
+        )[0]
+
+        self.assertEqual(record["measure"], "tbsp")
+        self.assertEqual(record["source_label"], "tbsp")
+
+    def test_reads_the_unit_from_the_portion_description(self):
+        record = parse_portions(
+            self.portions(modifier=None, portionDescription="1 cup")
+        )[0]
+
+        self.assertEqual(record["measure"], "cup")
+
+    def test_drops_the_reference_amount(self):
+        portions = self.portions(
+            modifier=None,
+            portionDescription=None,
+            measureUnit={"id": 1121, "name": "RACC", "abbreviation": "RACC"},
+        )
+
+        self.assertEqual(parse_portions(portions), [])
+
+    def test_drops_a_portion_without_a_gram_weight(self):
+        self.assertEqual(parse_portions(self.portions(gramWeight=None)), [])
+
+    def test_drops_a_portion_without_a_positive_amount(self):
+        self.assertEqual(parse_portions(self.portions(amount=0.0)), [])
+        self.assertEqual(parse_portions(self.portions(amount=-2.0)), [])
+
+    def test_drops_a_portion_with_a_non_numeric_amount(self):
+        self.assertEqual(parse_portions(self.portions(amount=None)), [])
+        self.assertEqual(parse_portions(self.portions(amount="1")), [])
+
+    def test_keeps_several_measures_for_one_food(self):
+        food = {
+            "foodPortions": [
+                self.portions()["foodPortions"][0],
+                self.portions(amount=2.0, gramWeight=33.9, sequenceNumber=1)[
+                    "foodPortions"
+                ][0],
+            ]
+        }
+
+        records = parse_portions(food)
+
+        self.assertEqual([record["measure"] for record in records], ["cup", "cup"])
+        self.assertEqual([record["sequence"] for record in records], [2, 1])
+
+    def test_falls_through_to_the_measure_unit_when_the_modifier_is_no_unit(self):
+        record = parse_portions(self.portions(modifier="shredded"))[0]
+
+        self.assertEqual(record["measure"], "cup")
+        self.assertEqual(record["source_label"], "cup")
+
+    def test_returns_no_measures_for_a_food_without_portions(self):
+        self.assertEqual(parse_portions({"description": "Rolled oats"}), [])
+        self.assertEqual(parse_portions({"foodPortions": None}), [])
+
+    def test_ignores_entries_that_are_not_objects(self):
+        self.assertEqual(parse_portions({"foodPortions": [None, 5, "x"]}), [])
+
+    def test_truncates_a_long_source_label(self):
+        label = "piece, cooked, excluding refuse " + "padding " * 20
+
+        record = parse_portions(self.portions(modifier=label))[0]
+
+        self.assertEqual(len(record["source_label"]), 100)
+
+    def test_fills_in_a_missing_sequence(self):
+        record = parse_portions(self.portions(sequenceNumber=None))[0]
+
+        self.assertEqual(record["sequence"], 1)
+
+    def test_rejects_a_food_that_is_not_an_object(self):
+        with self.assertRaises(USDADataError):
+            parse_portions(["not", "a", "food"])
+
+    def test_rejects_a_portion_table_that_is_not_an_array(self):
+        with self.assertRaises(USDADataError):
+            parse_portions({"foodPortions": {"amount": 1}})
+
+
+class IngredientMeasureTests(TestCase):
+    def setUp(self):
+        self.ingredient = Ingredient.objects.create(name="Rolled oats")
+
+    def measure(self, **overrides):
+        values = {
+            "ingredient": self.ingredient,
+            "measure": "cup",
+            "source_label": "cup",
+            "amount": 1.0,
+            "gram_weight": 152.0,
+            "sequence": 1,
+        }
+        values.update(overrides)
+        return IngredientMeasure.objects.create(**values)
+
+    def test_str_states_the_conversion(self):
+        measure = self.measure()
+
+        self.assertEqual(str(measure), "1 cup = 152 g")
+
+    def test_measures_are_reachable_from_the_ingredient(self):
+        measure = self.measure()
+
+        self.assertEqual(self.ingredient.measures.get(), measure)
+
+    def test_rejects_a_non_positive_amount(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self.measure(amount=0)
+
+    def test_rejects_a_non_positive_gram_weight(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self.measure(gram_weight=0)
+
+    def test_sync_replaces_the_existing_measures(self):
+        self.measure(sequence=1, gram_weight=90)
+        self.measure(sequence=2, gram_weight=180)
+
+        sync_measures(
+            self.ingredient,
+            [
+                {
+                    "measure": "tbsp",
+                    "source_label": "tbsp",
+                    "amount": 1.0,
+                    "gram_weight": 33.9,
+                    "sequence": 1,
+                }
+            ],
+        )
+
+        self.assertEqual(self.ingredient.measures.count(), 1)
+        measure = self.ingredient.measures.get()
+        self.assertEqual(measure.measure, "tbsp")
+        self.assertEqual(measure.gram_weight, 33.9)
+
+    def test_sync_can_clear_every_measure(self):
+        self.measure()
+
+        sync_measures(self.ingredient, [])
+
+        self.assertEqual(self.ingredient.measures.count(), 0)
+
+
+class ParseAmountTests(TestCase):
+    def test_reads_a_mixed_number(self):
+        self.assertEqual(parse_amount("1 1/2 cups rolled oats"), (1.5, "cup", "rolled oats"))
+
+    def test_reads_a_plain_fraction(self):
+        self.assertEqual(parse_amount("1/2 cup milk"), (0.5, "cup", "milk"))
+
+    def test_reads_an_integer(self):
+        self.assertEqual(parse_amount("2 tbsp butter"), (2, "tbsp", "butter"))
+
+    def test_reads_a_decimal(self):
+        self.assertEqual(parse_amount("0.75 cup flour"), (0.75, "cup", "flour"))
+
+    def test_reads_unicode_fractions(self):
+        self.assertEqual(parse_amount("½ cup blueberries"), (0.5, "cup", "blueberries"))
+        self.assertEqual(parse_amount("1½ cups milk"), (1.5, "cup", "milk"))
+        self.assertEqual(parse_amount("1 ⅓ cups oats"), (1 + 1 / 3, "cup", "oats"))
+
+    def test_reads_a_count_word(self):
+        self.assertEqual(parse_amount("3 cloves garlic"), (3, "clove", "garlic"))
+
+    def test_reads_a_mass_word(self):
+        self.assertEqual(parse_amount("1 lb chicken"), (1, "lb", "chicken"))
+
+    def test_drops_a_connecting_of(self):
+        self.assertEqual(parse_amount("1 cup of flour"), (1, "cup", "flour"))
+
+    def test_returns_none_for_a_line_without_a_number(self):
+        self.assertEqual(parse_amount("salt to taste"), (None, None, "salt to taste"))
+
+    def test_returns_none_for_an_empty_line(self):
+        self.assertEqual(parse_amount(""), (None, None, ""))
+
+    def test_leaves_no_remainder_for_a_bare_amount(self):
+        self.assertEqual(parse_amount("2"), (2, None, ""))
+
+
+class GramsForTests(TestCase):
+    def test_exact_measure_match(self):
+        measures = [Measure("cup", 1.0, 152.0)]
+
+        self.assertEqual(grams_for(measures, "cup", 2), 304.0)
+
+    def test_exact_measure_with_a_multi_unit_amount(self):
+        measures = [Measure("tomato", 5.0, 49.7)]
+
+        self.assertAlmostEqual(grams_for(measures, "tomato", 3), 29.82)
+
+    def test_count_word_but_not_the_exact_measure(self):
+        measures = [Measure("cup", 1.0, 152.0)]
+
+        self.assertIsNone(grams_for(measures, "clove", 2))
+
+    def test_mass_does_not_need_a_measure(self):
+        self.assertEqual(grams_for([], "g", 225), 225.0)
+        self.assertAlmostEqual(grams_for([], "oz", 1), 28.3495)
+
+    def test_volume_converts_through_any_volume_measure(self):
+        measures = [Measure("tbsp", 1.0, 15.0)]
+
+        self.assertAlmostEqual(grams_for(measures, "cup", 1), 240.0, places=1)
+
+    def test_volume_does_not_convert_without_a_measure(self):
+        self.assertIsNone(grams_for([], "cup", 1))
+
+    def test_volume_never_converts_through_a_mass_measure(self):
+        measures = [Measure("g", 100.0, 100.0)]
+
+        self.assertIsNone(grams_for(measures, "cup", 1))
+
+    def test_an_unknown_unit_does_not_convert(self):
+        self.assertIsNone(grams_for([], "pinch", 1))
+
+    def test_a_missing_unit_does_not_convert(self):
+        self.assertIsNone(grams_for([], None, 2))
+
+    def test_a_non_positive_amount_does_not_convert(self):
+        measures = [Measure("cup", 1.0, 152.0)]
+
+        self.assertIsNone(grams_for(measures, "cup", 0))
+        self.assertIsNone(grams_for(measures, "cup", -1))
+        self.assertIsNone(grams_for(measures, "cup", None))
+
+
+class ScaleNutrientsTests(TestCase):
+    def test_scales_each_nutrient_by_grams(self):
+        nutrition = IngredientNutrition(
+            kcal=400, protein_g=10, carbs_g=50, fat_g=5, fiber_g=20,
+            serving_size_g=100,
+        )
+
+        totals = scale_nutrients(nutrition, 50)
+
+        self.assertEqual(totals["kcal"], 200)
+        self.assertEqual(totals["protein_g"], 5)
+        self.assertEqual(totals["carbs_g"], 25)
+        self.assertEqual(totals["fat_g"], 2.5)
+        self.assertEqual(totals["fiber_g"], 10)
+
+    def test_null_nutrients_scale_to_the_value_that_is_known(self):
+        nutrition = IngredientNutrition(
+            kcal=400, protein_g=None, carbs_g=50, fat_g=None, fiber_g=20,
+            serving_size_g=100,
+        )
+
+        totals = scale_nutrients(nutrition, 50)
+
+        self.assertEqual(totals["kcal"], 200)
+        self.assertEqual(totals["protein_g"], 0)
+        self.assertEqual(totals["fiber_g"], 10)
+
+
+class ComputeNutritionTests(TestCase):
+    def setUp(self):
+        self.oats = Ingredient.objects.create(name="Rolled oats")
+        IngredientMeasure.objects.create(
+            ingredient=self.oats, measure="cup", source_label="cup",
+            amount=1.0, gram_weight=90.0, sequence=1,
+        )
+        IngredientNutrition.objects.create(
+            ingredient=self.oats, kcal=389, protein_g=16.9, carbs_g=66.3,
+            fat_g=6.9, fiber_g=10.6, serving_size_g=100,
+            source="USDA", source_id="1",
+        )
+        self.salt = Ingredient.objects.create(name="Salt")
+        IngredientNutrition.objects.create(
+            ingredient=self.salt, kcal=0, protein_g=0, carbs_g=0,
+            fat_g=0, fiber_g=0, serving_size_g=100,
+            source="USDA", source_id="2",
+        )
+
+    def lines(self, *pairs):
+        ingredients = {"Rolled oats": self.oats, "Salt": self.salt}
+        return [(ingredients[name], quantity) for name, quantity in pairs]
+
+    def test_sums_each_line_and_divides_by_servings(self):
+        result = compute(self.lines(("Rolled oats", "2 cups")), servings=4)
+
+        self.assertEqual(result.lines_used, 1)
+        self.assertEqual(result.lines_total, 1)
+        self.assertEqual(result.unresolved, [])
+        # 180 g of oats at 389 kcal / 100 g, over 4 servings
+        self.assertAlmostEqual(result.totals["kcal"], 700.2)
+        self.assertAlmostEqual(result.per_serving["kcal"], 700.2 / 4)
+        self.assertAlmostEqual(result.per_serving["fiber_g"], 19.08 / 4)
+
+    def test_a_line_with_no_measure_is_reported(self):
+        # Salt has nutrition but no household measures, so "1 pinch" cannot
+        # become a mass even though its unit table is complete.
+        result = compute(self.lines(("Salt", "1 pinch")), servings=2)
+
+        self.assertEqual(result.lines_used, 0)
+        self.assertEqual(result.per_serving["kcal"], 0)
+        self.assertIn(
+            {"ingredient": "Salt", "quantity": "1 pinch", "reason": "no unit measure"},
+            result.unresolved,
+        )
+
+    def test_a_line_without_a_quantity_is_reported(self):
+        result = compute(self.lines(("Salt", "to taste")), servings=2)
+
+        self.assertIn(
+            {"ingredient": "Salt", "quantity": "to taste", "reason": "no amount"},
+            result.unresolved,
+        )
+
+    def test_an_ingredient_without_nutrition_is_reported(self):
+        pepper = Ingredient.objects.create(name="Black pepper")
+        IngredientMeasure.objects.create(
+            ingredient=pepper, measure="tsp", source_label="tsp",
+            amount=1.0, gram_weight=2.3, sequence=1,
+        )
+
+        result = compute([(pepper, "1 tsp")], servings=2)
+
+        self.assertEqual(result.lines_used, 0)
+        self.assertEqual(result.unresolved[0]["reason"], "no nutrition")
+
+    def test_a_mix_of_resolved_and_unresolved_lines(self):
+        result = compute(
+            self.lines(("Rolled oats", "1 cup"), ("Salt", "to taste")),
+            servings=2,
+        )
+
+        self.assertEqual(result.lines_used, 1)
+        self.assertEqual(result.lines_total, 2)
+        self.assertAlmostEqual(result.totals["protein_g"], 15.21)
+        self.assertEqual(len(result.unresolved), 1)
+
+    def test_servings_of_one_makes_totals_equal_to_per_serving(self):
+        result = compute(self.lines(("Rolled oats", "1 cup")), servings=1)
+
+        self.assertAlmostEqual(result.per_serving["kcal"], result.totals["kcal"])
+
+
+class RecipeModelTests(TestCase):
+    def test_slug_is_the_idempotency_key_and_may_be_blank(self):
+        first = Recipe.objects.create(slug="bean-burrito-bowl")
+        another = Recipe.objects.create(slug=None, name="Homemade")
+        duplicate_raise = lambda: Recipe.objects.create(slug="bean-burrito-bowl")
+
+        self.assertIsNotNone(first.slug)
+        self.assertIsNone(another.slug)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            duplicate_raise()
+
+    def test_preparation_times_are_optional(self):
+        recipe = Recipe.objects.create(name="Hasty broth")
+
+        self.assertIsNone(recipe.prep_mins)
+        self.assertIsNone(recipe.cook_mins)
+
+    def test_ingredients_are_ordered_by_position(self):
+        recipe = Recipe.objects.create(name="Pasta")
+        oats = Ingredient.objects.create(name="Oats")
+        salt = Ingredient.objects.create(name="Salt")
+        RecipeIngredient.objects.create(recipe=recipe, ingredient=salt, quantity_text="1 pinch", position=2)
+        RecipeIngredient.objects.create(recipe=recipe, ingredient=oats, quantity_text="2 cups", position=1)
+
+        self.assertEqual(
+            [row.ingredient.name for row in recipe.ingredients.all()],
+            ["Oats", "Salt"],
+        )
+
+    def test_nutrition_method_defaults_to_source(self):
+        recipe = Recipe.objects.create(name="Soup")
+
+        nutrition = Nutrition.objects.create(
+            recipe=recipe, kcal=1, protein_g=1, carbs_g=1, fat_g=1, fiber_g=0,
+        )
+
+        self.assertEqual(nutrition.method, "source")
+
 
 @override_settings(USDA_API_KEY="test-api-key")
 class USDAImportTests(TestCase):
@@ -539,6 +1002,42 @@ class USDABulkParserTests(BulkDatasetMixin, TestCase):
 
         self.assertEqual(record["fdc_id"], 123)
 
+    def test_parses_the_measure_table(self):
+        portion = {
+            "amount": 1.0,
+            "gramWeight": 152.0,
+            "sequenceNumber": 1,
+            "modifier": "cup",
+            "measureUnit": {"id": 1, "name": "undetermined", "abbreviation": None},
+        }
+
+        record = self.parse_dataset([self.food(foodPortions=[portion])])[0]
+
+        self.assertEqual(len(record["portions"]), 1)
+        self.assertEqual(record["portions"][0]["measure"], "cup")
+        self.assertEqual(record["portions"][0]["gram_weight"], 152.0)
+
+    def test_reports_no_measures_for_a_food_without_a_portion_table(self):
+        record = self.parse_dataset([self.food(foodPortions=None)])[0]
+
+        self.assertEqual(record["portions"], [])
+
+    def test_drops_portions_that_state_no_conversion(self):
+        portions = [
+            {"amount": 1.0, "gramWeight": 30.0, "modifier": "RACC"},
+            {"amount": 1.0, "gramWeight": 30.0, "modifier": ""},
+            {"amount": 0.0, "gramWeight": 30.0, "modifier": "cup"},
+            {"amount": 1.0, "modifier": "cup"},
+        ]
+
+        record = self.parse_dataset([self.food(foodPortions=portions)])[0]
+
+        self.assertEqual(record["portions"], [])
+
+    def test_rejects_a_portion_table_that_is_not_an_array(self):
+        with self.assertRaises(USDADataError):
+            self.parse_dataset([self.food(foodPortions="cup")])
+
     def test_parses_iso_publication_date(self):
         record = self.parse_dataset(
             [self.food(publication_date="2026-04-30")]
@@ -794,6 +1293,17 @@ class USDABulkImportTests(BulkDatasetMixin, TestCase):
             **kwargs,
         )
 
+    def portion(self, **overrides):
+        values = {
+            "amount": 1.0,
+            "gramWeight": 152.0,
+            "sequenceNumber": 1,
+            "modifier": "cup",
+            "measureUnit": {"id": 1, "name": "undetermined", "abbreviation": None},
+        }
+        values.update(overrides)
+        return values
+
     def test_imports_foundation_dataset(self):
         output = StringIO()
 
@@ -816,6 +1326,58 @@ class USDABulkImportTests(BulkDatasetMixin, TestCase):
         self.import_dataset([self.food(data_type="SR Legacy")])
 
         self.assertEqual(IngredientNutrition.objects.get().source_id, "123")
+
+    def test_imports_household_measures(self):
+        portion = {
+            "amount": 2.0,
+            "gramWeight": 33.9,
+            "sequenceNumber": 1,
+            "modifier": "tbsp",
+            "measureUnit": {"id": 1, "name": "undetermined", "abbreviation": None},
+        }
+        output = StringIO()
+
+        self.import_dataset([self.food(foodPortions=[portion])], stdout=output)
+
+        measure = IngredientMeasure.objects.get()
+        self.assertEqual(measure.ingredient.name, "Rolled oats")
+        self.assertEqual(measure.measure, "tbsp")
+        self.assertEqual(measure.amount, 2.0)
+        self.assertEqual(measure.gram_weight, 33.9)
+        self.assertIn("measures=1", output.getvalue())
+        self.assertIn("foods_without_measures=0", output.getvalue())
+
+    def test_reports_foods_without_a_usable_measure(self):
+        output = StringIO()
+
+        self.import_dataset(
+            [self.food(foodPortions=[self.portion()]), self.food(fdc_id=124)],
+            stdout=output,
+        )
+
+        self.assertEqual(IngredientMeasure.objects.count(), 1)
+        self.assertIn("measures=1", output.getvalue())
+        self.assertIn("foods_without_measures=1", output.getvalue())
+
+    def test_reimport_replaces_the_imported_measures(self):
+        self.import_dataset([self.food(foodPortions=[self.portion(modifier="cup")])])
+        self.import_dataset([self.food(foodPortions=[self.portion(modifier="tbsp")])])
+
+        measure = IngredientMeasure.objects.get()
+        self.assertEqual(measure.measure, "tbsp")
+        self.assertEqual(IngredientMeasure.objects.count(), 1)
+
+    def test_dry_run_does_not_write_measures(self):
+        output = StringIO()
+
+        self.import_dataset(
+            [self.food(foodPortions=[self.portion()])],
+            "--dry-run",
+            stdout=output,
+        )
+
+        self.assertEqual(IngredientMeasure.objects.count(), 0)
+        self.assertIn("measures=1", output.getvalue())
 
     def test_stores_missing_nutrients_as_null(self):
         self.import_dataset([self.food(omit_nutrients=(1079,))])
@@ -1053,3 +1615,173 @@ class USDABulkImportTests(BulkDatasetMixin, TestCase):
         renamed = Ingredient.objects.exclude(name=base).get()
         self.assertLessEqual(len(renamed.name), NAME_MAX_LENGTH)
         self.assertTrue(renamed.name.endswith("(FDC 124)"))
+
+
+def card_page(left, right=None, whole=None):
+    """Build a synthetic Team Nutrition page for :func:`extract_recipe`."""
+    return (
+        left,
+        right if right is not None else [],
+        whole if whole is not None else left,
+    )
+
+
+class SplitQuantityTests(TestCase):
+    def test_classic_card_puts_the_name_after_the_measures(self):
+        line = "3 ½ cups or 1 lb 5 oz Canned, low sodium pinto beans, drained, rinsed"
+
+        quantity, name = split_quantity(line)
+
+        self.assertEqual(quantity, "3 ½ cups or 1 lb 5 oz")
+        self.assertEqual(name, "Canned, low sodium pinto beans, drained, rinsed")
+
+    def test_healthy_kids_table_puts_the_name_before_the_measures(self):
+        line = "Brown rice, long grain, regular, dry 4 ¾ oz ¾ cup 9 ½ oz 1 ½ cups"
+
+        quantity, name = split_quantity(line)
+
+        self.assertEqual(quantity, "4 ¾ oz ¾ cup 9 ½ oz 1 ½ cups")
+        self.assertEqual(name, "Brown rice, long grain, regular, dry")
+
+    def test_measureless_line_keeps_the_whole_line_as_a_name(self):
+        self.assertEqual(split_quantity("Weight Measure Weight Measure"), ("", "Weight Measure Weight Measure"))
+
+    def test_name_only_line_carries_no_quantity(self):
+        self.assertEqual(split_quantity("*Fresh butternut squash"), ("", "*Fresh butternut squash"))
+
+
+class RecipePDFTests(TestCase):
+    def test_classic_card(self):
+        pages = [
+            card_page(
+                [
+                    "United States Department of Agriculture",
+                    "Bean Burrito Bowl – CACFP Home Childcare",
+                    "Bean Burrito Bowl",
+                    "Ingredients",
+                    "3 ½ cups or 1 lb 5 oz Canned, low sodium pinto beans",
+                    "OR",
+                    "¼ cup or 1 oz Fresh onions, chopped",
+                    "¾ tsp Garlic powder",
+                    "The grain ingredients used in this recipe must meet",
+                ],
+                [
+                    "Preparation Time: 40 minutes",
+                    "Cooking Time: 50 minutes",
+                    "Makes: 6 servings",
+                    "Directions",
+                    "1 Combine the beans and the onions in a saucepan.",
+                    "Heat to 140 °F for at least 15 seconds.",
+                ],
+            )
+        ]
+
+        recipe = extract_recipe(pages)
+
+        self.assertEqual(recipe["title"], "Bean Burrito Bowl")
+        self.assertEqual(recipe["servings"], 6)
+        self.assertEqual(recipe["prep_mins"], 40)
+        self.assertEqual(recipe["cook_mins"], 50)
+        self.assertEqual(len(recipe["ingredients"]), 3)
+        self.assertEqual(recipe["ingredients"][0], "3 ½ cups or 1 lb 5 oz Canned, low sodium pinto beans")
+        self.assertGreaterEqual(len(recipe["directions"]), 2)
+
+    def test_letter_spaced_ingredients_header(self):
+        pages = [
+            card_page(
+                [
+                    "I ngredients",
+                    "¾ cup or 2 oz Bulgur wheat, dry",
+                    "1 ½ cups or 11 oz *Dry kidney beans, cooked",
+                ],
+                ["Directions", "Rinse the beans thoroughly."],
+            )
+        ]
+
+        recipe = extract_recipe(pages)
+
+        self.assertEqual(len(recipe["ingredients"]), 2)
+        self.assertEqual(recipe["ingredients"][0], "¾ cup or 2 oz Bulgur wheat, dry")
+
+    def test_merged_header_sets_both_sections(self):
+        pages = [
+            card_page(
+                [
+                    "Ingredients Directions",
+                    "1 ½ cups or 11 oz *Dry kidney beans, cooked",
+                    "Ingredients",
+                ],
+                ["Directions", "1 Rinse the beans until the water runs clear."],
+            )
+        ]
+
+        recipe = extract_recipe(pages)
+
+        self.assertGreaterEqual(len(recipe["ingredients"]), 1)
+        self.assertEqual(recipe["ingredients"][0], "1 ½ cups or 11 oz *Dry kidney beans, cooked")
+        self.assertIn("Rinse the beans until the water runs clear.", recipe["directions"][0])
+
+    def test_cover_page_without_ingredients_is_none(self):
+        pages = [
+            card_page(
+                [
+                    "Recipes for Healthy Kids",
+                    "GRAND PRIZE WINNER",
+                    "These mouth-watering burgers are made with",
+                ],
+                ["Our Story", "School nutrition professionals"],
+            )
+        ]
+
+        self.assertIsNone(extract_recipe(pages))
+
+    def test_name_only_rows_join_the_following_measure_row(self):
+        pages = [
+            card_page(
+                [
+                    "Ingredients",
+                    "*Fresh butternut squash",
+                    "peeled, cubed 2 lb 14 oz 2 qt",
+                    "Olive Oil ⅓ cup",
+                ],
+                ["Directions", "Bake at 375 °F."],
+            )
+        ]
+
+        recipe = extract_recipe(pages)
+
+        self.assertIn("Olive Oil ⅓ cup", recipe["ingredients"])
+
+    def test_duplicate_sequence_measures_and_credit_lines_are_skipped(self):
+        pages = [
+            card_page(
+                [
+                    "Ingredients",
+                    "¾ cup (6 oz spoodle) provides ⅝ cup vegetable",
+                    "¼ cup or 1 oz Fresh onions, chopped",
+                ],
+                [],
+            )
+        ]
+
+        recipe = extract_recipe(pages)
+
+        self.assertEqual(len(recipe["ingredients"]), 1)
+
+    def test_story_pages_before_the_first_ingredients_header_are_skipped(self):
+        pages = [
+            card_page(["Recipes for Healthy Kids", "Our Story"], ["The students win."]),
+            card_page(
+                [
+                    "Aztec Grain Salad",
+                    "Ingredients",
+                    "1 ½ cups Quinoa, dry",
+                ],
+                ["Directions", "1 Preheat the oven to 400 °F."],
+            ),
+        ]
+
+        recipe = extract_recipe(pages)
+
+        self.assertEqual(recipe["title"], "Aztec Grain Salad")
+        self.assertEqual(len(recipe["ingredients"]), 1)

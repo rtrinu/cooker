@@ -20,15 +20,82 @@ from recipes.management.commands.import_usda import (
     parse_publication_date,
     positive_int,
 )
+from recipes.units import normalize_measure
 
 SUPPORTED_DATA_TYPES = frozenset({"Foundation", "SR Legacy"})
 DEFAULT_CHUNK_SIZE = 1 << 20
 MAX_OBJECT_BYTES = 64 << 20
 MAX_KEY_BYTES = 1 << 20
 CATEGORY_MAX_LENGTH = 50
+SOURCE_LABEL_MAX_LENGTH = 100
 JSON_SUFFIX = ".json"
 SNAPSHOT_HINT = "it looks like a fetch_usda_json snapshot, use import_usda_json"
 INCOMPLETE = object()
+
+
+def parse_portions(food):
+    """Parse ``foodPortions`` into household measures for recipe conversion.
+
+    Returns one record per portion that states a usable conversion. A portion
+    is dropped when it has no gram weight, a non-positive amount, or wording
+    for no known unit -- the ``RACC`` reference amounts fall into that last
+    group, because a recipe never asks for one RACC of an ingredient.
+    """
+    if not isinstance(food, dict):
+        raise USDADataError("food entry must be a JSON object")
+    portions = food.get("foodPortions")
+    if portions is None:
+        return []
+    if not isinstance(portions, list):
+        raise USDADataError("foodPortions must be an array")
+
+    records = []
+    for index, portion in enumerate(portions):
+        if not isinstance(portion, dict):
+            continue
+        amount = portion.get("amount")
+        gram_weight = portion.get("gramWeight")
+        if isinstance(amount, bool) or not isinstance(amount, (int, float)):
+            continue
+        if isinstance(gram_weight, bool) or not isinstance(gram_weight, (int, float)):
+            continue
+        if amount <= 0 or gram_weight <= 0:
+            continue
+
+        unit = portion.get("measureUnit")
+        unit = unit if isinstance(unit, dict) else {}
+        label = None
+        measure = None
+        for candidate in (
+            portion.get("modifier"),
+            portion.get("portionDescription"),
+            unit.get("name"),
+            unit.get("abbreviation"),
+        ):
+            if not candidate or not str(candidate).strip():
+                continue
+            normalized = normalize_measure(candidate)
+            if normalized:
+                label = " ".join(str(candidate).split())
+                measure = normalized
+                break
+        if measure is None:
+            continue
+
+        sequence = portion.get("sequenceNumber")
+        if isinstance(sequence, bool) or not isinstance(sequence, int) or sequence < 0:
+            sequence = index + 1
+        records.append(
+            {
+                "measure": measure,
+                "source_label": label[:SOURCE_LABEL_MAX_LENGTH],
+                "amount": float(amount),
+                "gram_weight": float(gram_weight),
+                "sequence": sequence,
+            }
+        )
+    return records
+
 
 
 class ChunkReader:
@@ -264,6 +331,7 @@ def parse_bulk_food(food, require_all_nutrients=False):
         "name": parse_description(food),
         "category": parse_category(food),
         "publication_date": parse_publication_date(food.get("publicationDate")),
+        "portions": parse_portions(food),
     }
     required = NUTRIENT_FIELDS if require_all_nutrients else ()
     record.update(extract_nutrients(food, required=required))

@@ -21,7 +21,9 @@ from recipes.management.commands.usda_bulk import (
 
 PROGRESS_INTERVAL = 500
 
-BatchResult = namedtuple("BatchResult", ("created", "updated", "skipped", "renamed"))
+BatchResult = namedtuple(
+    "BatchResult", ("created", "updated", "skipped", "renamed", "measures", "unconverted")
+)
 
 
 class Command(BaseCommand):
@@ -83,6 +85,8 @@ class Command(BaseCommand):
             "partial": 0,
             "ignored": 0,
             "renamed": 0,
+            "measures": 0,
+            "unconverted": 0,
         }
         reported = 0
         pending = []
@@ -93,6 +97,8 @@ class Command(BaseCommand):
             counts["created"] += result.created
             counts["updated"] += result.updated
             counts["skipped"] += result.skipped
+            counts["measures"] += result.measures
+            counts["unconverted"] += result.unconverted
             if result.skipped:
                 return
             counts["renamed"] += len(result.renamed)
@@ -145,6 +151,11 @@ class Command(BaseCommand):
             f"parsed={counts['parsed']} partial={counts['partial']} "
             f"ignored={counts['ignored']} empty={counts['empty']}"
         )
+        if counts["measures"] or counts["unconverted"]:
+            self.stdout.write(
+                f"measures={counts['measures']} "
+                f"foods_without_measures={counts['unconverted']}"
+            )
         if counts["renamed"]:
             self.stdout.write(
                 f"renamed={counts['renamed']} duplicate descriptions "
@@ -159,10 +170,17 @@ class Command(BaseCommand):
             f"parsed={counts['parsed']} partial={counts['partial']} "
             f"created={counts['created']} updated={counts['updated']} "
             f"skipped={counts['skipped']} ignored={counts['ignored']} "
-            f"empty={counts['empty']}"
+            f"empty={counts['empty']} measures={counts['measures']}"
         )
 
+    @staticmethod
+    def _measure_totals(records):
+        measures = sum(len(record["portions"]) for record in records)
+        unconverted = sum(1 for record in records if not record["portions"])
+        return measures, unconverted
+
     def _write_batch(self, records, dry_run, claimed):
+        measures, unconverted = self._measure_totals(records)
         if dry_run:
             created = 0
             updated = 0
@@ -183,7 +201,7 @@ class Command(BaseCommand):
                 claimed.add(label)
                 verb = "update" if existing else "create"
                 self.stdout.write(f"{record['fdc_id']}: would {verb} {label}")
-            return BatchResult(created, updated, 0, renamed)
+            return BatchResult(created, updated, 0, renamed, measures, unconverted)
 
         created = 0
         updated = 0
@@ -196,6 +214,7 @@ class Command(BaseCommand):
                         record["fdc_id"],
                         category=record["category"],
                         publication_date=record["publication_date"],
+                        portions=record["portions"],
                     )
                     if result.created:
                         created += 1
@@ -205,5 +224,5 @@ class Command(BaseCommand):
                         renamed.append(result.name)
         except IntegrityError as exc:
             self.stderr.write(f"batch of {len(records)} foods skipped ({exc})")
-            return BatchResult(0, 0, len(records), [])
-        return BatchResult(created, updated, 0, renamed)
+            return BatchResult(0, 0, len(records), [], 0, 0)
+        return BatchResult(created, updated, 0, renamed, measures, unconverted)

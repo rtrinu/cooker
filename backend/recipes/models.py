@@ -50,13 +50,50 @@ class IngredientNutrition(models.Model):
         ]
 
 
+class IngredientMeasure(models.Model):
+    """One household measure of an ingredient, from the USDA foodPortions table.
+
+    ``amount`` of ``measure`` weighs ``gram_weight`` grams, so a recipe asking
+    for 2 cups converts with ``2 * gram_weight / amount``. Derived from the
+    dataset and replaced wholesale on re-import.
+    """
+
+    ingredient = models.ForeignKey(
+        Ingredient, on_delete=models.CASCADE, related_name="measures"
+    )
+    measure = models.CharField(max_length=50)
+    source_label = models.CharField(max_length=100, blank=True)
+    amount = models.FloatField()
+    gram_weight = models.FloatField()
+    sequence = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        ordering = ("ingredient", "sequence")
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0) & models.Q(gram_weight__gt=0),
+                name="ingredient_measure_valid_values",
+            ),
+        ]
+
+    def __str__(self):
+        label = self.source_label or self.measure
+        return f"{self.amount:g} {label} = {self.gram_weight:g} g"
+
+
 class Recipe(models.Model):
+    slug = models.CharField(max_length=200, unique=True, null=True, blank=True)
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     servings = models.PositiveIntegerField(default=1)
-    prep_mins = models.PositiveIntegerField()
-    cook_mins = models.PositiveIntegerField()
+    serving_size = models.CharField(max_length=100, blank=True)
+    prep_mins = models.PositiveIntegerField(null=True, blank=True)
+    cook_mins = models.PositiveIntegerField(null=True, blank=True)
     tags = models.JSONField(default=list, blank=True)
+    category = models.CharField(max_length=50, blank=True)
+    contributor = models.CharField(max_length=100, blank=True)
+    source_url = models.URLField(blank=True)
+    directions = models.TextField(blank=True)
 
     def __str__(self):
         return self.name
@@ -68,6 +105,10 @@ class RecipeIngredient(models.Model):
     )
     ingredient = models.ForeignKey(Ingredient, on_delete=models.PROTECT)
     quantity_text = models.CharField(max_length=50)
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("position",)
 
 
 class Nutrition(models.Model):
@@ -79,6 +120,11 @@ class Nutrition(models.Model):
     carbs_g = models.FloatField()
     fat_g = models.FloatField()
     fiber_g = models.FloatField(default=0)
+    method = models.CharField(
+        max_length=20,
+        choices=(("computed", "computed"), ("source", "source")),
+        default="source",
+    )
 
 
 class Substitution(models.Model):

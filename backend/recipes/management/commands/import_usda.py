@@ -13,7 +13,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import IntegrityError, transaction
 
-from recipes.models import Ingredient, IngredientNutrition
+from recipes.models import Ingredient, IngredientMeasure, IngredientNutrition
 
 SOURCE = "USDA FoodData Central"
 API_BASE_URL = "https://api.nal.usda.gov/fdc/v1"
@@ -238,12 +238,26 @@ def preview_name(name, fdc_id, claimed=None):
     return name
 
 
-def upsert_food(parsed, fdc_id, category=None, publication_date=None):
+def sync_measures(ingredient, portions):
+    """Replace an ingredient's household measures with one parsed portion list.
+
+    Measures are derived from the dataset rather than accumulated, so a
+    re-import reflects the source exactly: measures USDA since removed are
+    dropped along with the rest.
+    """
+    IngredientMeasure.objects.filter(ingredient=ingredient).delete()
+    IngredientMeasure.objects.bulk_create(
+        IngredientMeasure(ingredient=ingredient, **portion) for portion in portions
+    )
+
+
+def upsert_food(parsed, fdc_id, category=None, publication_date=None, portions=None):
     """Store one parsed food.
 
     Returns whether the nutrition row was created, whether a duplicate USDA
     description had to be stored under a suffixed name, and the ingredient name
-    actually used.
+    actually used. ``portions`` replaces the ingredient's household measures
+    when given; leaving it None keeps whatever measures already exist.
     """
     existing = find_nutrition(fdc_id)
     if existing:
@@ -268,6 +282,8 @@ def upsert_food(parsed, fdc_id, category=None, publication_date=None):
         source_id=str(fdc_id),
         defaults=defaults,
     )
+    if portions is not None:
+        sync_measures(ingredient, portions)
     return UpsertResult(created=was_created, renamed=renamed, name=ingredient.name)
 
 
