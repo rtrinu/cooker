@@ -4,7 +4,6 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
-uv.lock
 
 # Django
 *.log
@@ -13,6 +12,9 @@ db.sqlite3-journal
 staticfiles/
 media/
 local_settings.py
+
+# Sample data
+sample_data/
 
 # Node
 node_modules/
