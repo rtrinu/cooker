@@ -38,6 +38,14 @@ from .models import (
     RecipeIngredient,
 )
 from .nutrition import compute, scale_nutrients
+from .openrecipearchive import (
+    ENGLISH_COLLECTIONS,
+    SOURCE,
+    parse_directions,
+    parse_ingredient,
+    parse_record,
+    parse_servings,
+)
 from .pdf import extract_recipe, split_quantity
 from .units import grams_for, normalize_measure, parse_amount
 
@@ -1460,7 +1468,7 @@ class ComputeNutritionTests(TestCase):
         self.assertEqual(result.lines_used, 0)
         self.assertEqual(result.per_serving["kcal"], 0)
         self.assertIn(
-            {"ingredient": "Salt", "quantity": "1 pinch", "reason": "no unit measure"},
+            {"ingredient": "Salt", "quantity": "1 pinch", "reason": "no pinch measure"},
             result.unresolved,
         )
 
@@ -2178,3 +2186,307 @@ class RecipeImportCommandTests(TestCase):
             )
 
         self.assertIn("could not read", stderr.getvalue())
+
+
+class OpenRecipeArchiveParserTests(TestCase):
+    def test_normalises_word_numbers_and_old_units(self):
+        cases = {
+            "three table-spoonfuls of flour": ("3 tbsp", "flour"),
+            "a quarter of a pound of white sugar": ("1/4 lb", "white sugar"),
+            "a tea-spoonful of mixed spice": ("1 tsp", "mixed spice"),
+            "half a pound of butter": ("1/2 lb", "butter"),
+            "two and a half cups milk": ("2 1/2 cup", "milk"),
+            "one-half cup sugar": ("1/2 cup", "sugar"),
+            "nine large pippin apples": ("9 large", "pippin apples"),
+            "a pinch of salt": ("1 pinch", "salt"),
+            "seven eggs": ("7", "egg"),
+            "1 (14-ounce) can tomatoes": ("1 can", "tomatoes"),
+        }
+
+        for line, expected in cases.items():
+            with self.subTest(line=line):
+                quantity, name, raw = parse_ingredient(line)
+                self.assertEqual((quantity, name), expected)
+                self.assertEqual(raw, line)
+
+    def test_amountless_lines_keep_the_name_and_no_quantity(self):
+        self.assertEqual(
+            parse_ingredient("salt and pepper to taste")[:2],
+            ("", "salt and pepper"),
+        )
+        self.assertEqual(parse_ingredient("Bit of bay leaf")[:2], ("", "bay leaf"))
+        self.assertIsNone(parse_ingredient("1 cup"))
+
+    def test_servings_are_read_from_the_stated_yield(self):
+        self.assertEqual(parse_servings("Makes 6 servings")[0], 6)
+        self.assertEqual(parse_servings("Serves six")[0], 6)
+        self.assertEqual(parse_servings("This serves 4 to 6.")[0], 4)
+        self.assertEqual(parse_servings("for 4 people")[0], 4)
+        self.assertIsNone(parse_servings("Yields 2 quarts")[0])
+        self.assertIsNone(parse_servings("Makes 1 loaf")[0])
+
+    def test_body_sections_become_ingredients_and_steps(self):
+        body = (
+            "## Ingredients\n\n"
+            "- 1 can tomatoes\n"
+            "- 1 pint water\n"
+            "- 12 peppercorns\n\n"
+            "## Directions\n\n"
+            "1. Cook tomatoes and water twenty minutes.\n"
+            "2. Strain and serve.\n"
+        )
+
+        record = self.record(body=body)
+        parsed = parse_record(record)
+
+        self.assertEqual(
+            [(item.quantity, item.name) for item in parsed.ingredients],
+            [("1 can", "tomatoes"), ("1 pint", "water"), ("12", "peppercorns")],
+        )
+        self.assertEqual(
+            parsed.directions,
+            "Cook tomatoes and water twenty minutes.\nStrain and serve.",
+        )
+
+    def test_record_carries_provenance_and_unknown_servings(self):
+        parsed = parse_record(self.record())
+
+        self.assertEqual(parsed.slug, "ora-ye-old-american-tomato-soup")
+        self.assertEqual(parsed.source_id, "ye-old-american/tomato-soup")
+        self.assertEqual(parsed.license, "public-domain")
+        self.assertEqual(parsed.collection, "ye-old-american")
+        self.assertIn("Fannie Farmer", parsed.attribution)
+        self.assertIsNone(parsed.servings)
+        self.assertIn("no yield statement", parsed.servings_note)
+        self.assertEqual(parsed.first_instruction, "Cook and serve.")
+
+    def test_record_with_yield_gets_servings(self):
+        parsed = parse_record(
+            self.record(body=self.body(directions="Makes 6 servings\n1. Cook."))
+        )
+
+        self.assertEqual(parsed.servings, 6)
+
+    def test_english_collection_set_is_exactly_the_english_sources(self):
+        self.assertEqual(len(ENGLISH_COLLECTIONS), 9)
+        self.assertIn("ye-old-american", ENGLISH_COLLECTIONS)
+
+    def body(self, directions="1. Cook and serve."):
+        return (
+            "## Ingredients\n\n"
+            "- 1 can tomatoes\n"
+            "- 1 pint water\n\n"
+            f"## Directions\n\n{directions}\n"
+        )
+
+    def record(self, **overrides):
+        data = {
+            "title": "Tomato Soup",
+            "slug": "tomato-soup",
+            "collection": "ye-old-american",
+            "culture": "american-historical",
+            "body": self.body(),
+            "license": "public-domain",
+            "author": "Fannie Farmer",
+            "source_title": "The Boston Cooking-School Cook Book",
+            "source_year": "1896",
+            "source_url": "https://www.gutenberg.org/ebooks/65061",
+            "tags": ["american-historical"],
+        }
+        data.update(overrides)
+        return data
+
+
+class OpenRecipeArchiveImportCommandTests(TestCase):
+    def setUp(self):
+        self.directory = TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.directory_path = Path(self.directory.name)
+
+    def body(self, directions="1. Cook and serve."):
+        return (
+            "## Ingredients\n\n"
+            "- 1 can tomatoes\n"
+            "- 1 pint water\n\n"
+            f"## Directions\n\n{directions}\n"
+        )
+
+    def record(self, **overrides):
+        data = {
+            "title": "Tomato Soup",
+            "slug": "tomato-soup",
+            "collection": "ye-old-american",
+            "culture": "american-historical",
+            "body": self.body(),
+            "license": "public-domain",
+            "author": "Fannie Farmer",
+            "source_title": "The Boston Cooking-School Cook Book",
+            "source_year": "1896",
+            "source_url": "https://www.gutenberg.org/ebooks/65061",
+            "tags": ["american-historical"],
+        }
+        data.update(overrides)
+        return data
+
+    def jsonl(self, records, name="recipes.jsonl"):
+        path = self.directory_path / name
+        path.write_text(
+            "\n".join(json.dumps(record) for record in records) + "\n",
+            encoding="utf-8",
+        )
+        return path
+
+    def test_imports_recipe_with_provenance_and_raw_ingredient_lines(self):
+        path = self.jsonl([self.record(body=self.body("Makes 6 servings.\n1. Cook."))])
+
+        call_command("import_openrecipearchive", str(path), stdout=StringIO())
+
+        recipe = Recipe.objects.get()
+        self.assertEqual(recipe.source, SOURCE)
+        self.assertEqual(recipe.source_id, "ye-old-american/tomato-soup")
+        self.assertEqual(recipe.collection, "ye-old-american")
+        self.assertEqual(recipe.license, "public-domain")
+        self.assertEqual(recipe.servings, 6)
+        self.assertIn("Fannie Farmer", recipe.attribution)
+        self.assertEqual(recipe.directions, "Cook.")
+        rows = list(recipe.ingredients.all())
+        self.assertEqual(
+            [(row.quantity_text, row.ingredient.name) for row in rows],
+            [("1 can", "tomatoes"), ("1 pint", "water")],
+        )
+        self.assertEqual(rows[0].raw_text, "1 can tomatoes")
+
+    def test_reimport_updates_the_same_recipe(self):
+        path = self.jsonl([self.record()])
+
+        call_command("import_openrecipearchive", str(path), stdout=StringIO())
+        call_command("import_openrecipearchive", str(path), stdout=StringIO())
+
+        self.assertEqual(Recipe.objects.count(), 1)
+        self.assertEqual(RecipeIngredient.objects.count(), 2)
+
+    def test_unknown_servings_are_printed_with_recipe_and_first_instruction(self):
+        path = self.jsonl([self.record()])
+        output = StringIO()
+
+        call_command("import_openrecipearchive", str(path), stdout=output)
+
+        text = output.getvalue()
+        self.assertIn("NO SERVINGS: ye-old-american/tomato-soup", text)
+        self.assertIn('"Tomato Soup"', text)
+        self.assertIn("no yield statement", text)
+        self.assertIn("first instruction: Cook and serve.", text)
+        self.assertIsNone(Recipe.objects.get().servings)
+
+    def test_servings_report_is_written(self):
+        path = self.jsonl([self.record()])
+        report = self.directory_path / "servings.txt"
+
+        call_command(
+            "import_openrecipearchive",
+            str(path),
+            "--servings-report",
+            str(report),
+            stdout=StringIO(),
+        )
+
+        self.assertIn("ye-old-american/tomato-soup", report.read_text())
+
+    def test_english_collections_and_public_domain_license_are_required(self):
+        path = self.jsonl([
+            self.record(title="English", slug="english"),
+            self.record(title="French", slug="french", collection="cuisine-francaise"),
+            self.record(title="Restricted", slug="restricted", license="cc-by-nc"),
+        ])
+        output = StringIO()
+
+        call_command("import_openrecipearchive", str(path), stdout=output)
+
+        self.assertEqual(Recipe.objects.count(), 1)
+        self.assertEqual(Recipe.objects.get().name, "English")
+        self.assertIn("collection_skipped=1", output.getvalue())
+        self.assertIn("license_skipped=1", output.getvalue())
+
+    def test_collection_override_and_limit_and_offset(self):
+        path = self.jsonl([
+            self.record(title="One", slug="one"),
+            self.record(title="Two", slug="two"),
+            self.record(title="Three", slug="three"),
+        ])
+
+        call_command(
+            "import_openrecipearchive",
+            str(path),
+            "--limit",
+            "1",
+            stdout=StringIO(),
+        )
+        self.assertEqual(list(Recipe.objects.values_list("name", flat=True)), ["One"])
+
+        call_command(
+            "import_openrecipearchive",
+            str(path),
+            "--offset",
+            "2",
+            stdout=StringIO(),
+        )
+        self.assertEqual(
+            set(Recipe.objects.values_list("name", flat=True)), {"One", "Three"}
+        )
+
+    def test_dry_run_does_not_write(self):
+        path = self.jsonl([self.record()])
+        output = StringIO()
+
+        call_command(
+            "import_openrecipearchive", str(path), "--dry-run", stdout=output
+        )
+
+        self.assertFalse(Recipe.objects.exists())
+        self.assertFalse(Ingredient.objects.exists())
+        self.assertIn("dry run", output.getvalue())
+
+    def test_unmatched_report_lists_names_and_suggestions(self):
+        food = Ingredient.objects.create(name="Tomatoes, red, ripe, raw")
+        IngredientNutrition.objects.create(
+            ingredient=food,
+            kcal=18,
+            protein_g=0.9,
+            carbs_g=3.9,
+            fat_g=0.2,
+            fiber_g=1.2,
+            serving_size_g=100,
+            source="USDA",
+            source_id="1",
+        )
+        path = self.jsonl([self.record()])
+        report = self.directory_path / "unmatched.txt"
+
+        call_command(
+            "import_openrecipearchive",
+            str(path),
+            "--report",
+            str(report),
+            stdout=StringIO(),
+        )
+
+        text = report.read_text()
+        self.assertIn("water", text)
+        self.assertIn("e.g. ye-old-american/tomato-soup", text)
+        self.assertIn("(no close candidate)", text)
+
+    def test_reset_removes_only_the_previous_archive_import(self):
+        first = self.jsonl([self.record(title="Old", slug="old")], "first.jsonl")
+        second = self.jsonl([self.record(title="New", slug="new")], "second.jsonl")
+        call_command("import_openrecipearchive", str(first), stdout=StringIO())
+
+        call_command(
+            "import_openrecipearchive",
+            str(second),
+            "--reset",
+            stdout=StringIO(),
+        )
+
+        self.assertEqual(
+            list(Recipe.objects.values_list("name", flat=True)), ["New"]
+        )

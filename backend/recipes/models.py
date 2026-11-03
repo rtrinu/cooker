@@ -85,7 +85,7 @@ class Recipe(models.Model):
     slug = models.CharField(max_length=200, unique=True, null=True, blank=True)
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    servings = models.PositiveIntegerField(default=1)
+    servings = models.PositiveIntegerField(default=1, null=True, blank=True)
     serving_size = models.CharField(max_length=100, blank=True)
     prep_mins = models.PositiveIntegerField(null=True, blank=True)
     cook_mins = models.PositiveIntegerField(null=True, blank=True)
@@ -94,6 +94,26 @@ class Recipe(models.Model):
     contributor = models.CharField(max_length=100, blank=True)
     source_url = models.URLField(blank=True)
     directions = models.TextField(blank=True)
+
+    # Provenance for imported corpora. ``source`` and ``source_id`` identify a
+    # recipe in the source system, so re-imports update instead of duplicating.
+    # Both stay blank for recipes that were entered by hand or came from a PDF.
+    source = models.CharField(max_length=50, blank=True, db_index=True)
+    source_id = models.CharField(max_length=200, blank=True)
+    source_title = models.CharField(max_length=300, blank=True)
+    source_year = models.CharField(max_length=20, blank=True)
+    license = models.CharField(max_length=50, blank=True)
+    attribution = models.TextField(blank=True)
+    collection = models.CharField(max_length=100, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("source", "source_id"),
+                condition=~models.Q(source="") & ~models.Q(source_id=""),
+                name="unique_recipe_source_id",
+            ),
+        ]
 
     def __str__(self):
         return self.name
@@ -105,6 +125,7 @@ class RecipeIngredient(models.Model):
     )
     ingredient = models.ForeignKey(Ingredient, on_delete=models.PROTECT)
     quantity_text = models.CharField(max_length=50)
+    raw_text = models.TextField(blank=True)
     position = models.PositiveIntegerField(default=0)
 
     class Meta:

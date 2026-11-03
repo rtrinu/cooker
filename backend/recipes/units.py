@@ -14,12 +14,16 @@ import re
 # "oz (approx 2/3 cup)" the amount is ounces, not cups.
 MEASURE_SYNONYMS = {
     # volume
-    "cup": "cup", "cups": "cup",
-    "tbsp": "tbsp", "tablespoon": "tbsp", "tablespoons": "tbsp",
-    "tsp": "tsp", "teaspoon": "tsp", "teaspoons": "tsp",
+    "cup": "cup", "cups": "cup", "c": "cup", "cupful": "cup", "cupfuls": "cup",
+    "tbsp": "tbsp", "tbs": "tbsp", "tbl": "tbsp", "tblsp": "tbsp",
+    "tablespoon": "tbsp", "tablespoons": "tbsp",
+    "tablespoonful": "tbsp", "tablespoonfuls": "tbsp",
+    "tsp": "tsp", "tspn": "tsp", "teaspoon": "tsp", "teaspoons": "tsp",
+    "teaspoonful": "tsp", "teaspoonfuls": "tsp",
     "pint": "pint", "pints": "pint",
-    "quart": "quart", "quarts": "quart",
+    "quart": "quart", "quarts": "quart", "qt": "quart",
     "gallon": "gallon", "gallons": "gallon",
+    "gill": "gill", "gills": "gill",
     "fl oz": "fl oz", "fluid ounce": "fl oz", "fluid ounces": "fl oz",
     "ml": "ml", "milliliter": "ml", "milliliters": "ml",
     "l": "l", "liter": "l", "liters": "l", "litre": "l", "litres": "l",
@@ -69,6 +73,14 @@ MEASURE_SYNONYMS = {
     "olive": "olive", "olives": "olive",
     "cookie": "cookie", "cookies": "cookie",
     "drumstick": "drumstick", "drumsticks": "drumstick",
+    # Small count measures. They identify the unit so the name stays clean,
+    # but they deliberately have no gram weight: only an exact USDA measure
+    # for the ingredient can convert them.
+    "pinch": "pinch", "pinches": "pinch",
+    "dash": "dash", "dashes": "dash",
+    "handful": "handful", "handfuls": "handful",
+    "drop": "drop", "drops": "drop",
+    "sprig": "sprig", "sprigs": "sprig",
 }
 
 # These spellings keep into a standard unit only when they open a label.
@@ -97,7 +109,9 @@ def normalize_measure(label):
     return MEASURE_SYNONYMS.get(phrase) or MEASURE_SYNONYMS.get(phrase.split()[0])
 
 
-VOLUME_UNITS = frozenset({"ml", "l", "fl oz", "tsp", "tbsp", "cup", "pint", "quart", "gallon"})
+VOLUME_UNITS = frozenset({
+    "ml", "l", "fl oz", "tsp", "tbsp", "cup", "gill", "pint", "quart", "gallon",
+})
 MASS_UNITS = frozenset({"mg", "g", "kg", "oz", "lb"})
 
 # The only units that convert to each other without a measure from the
@@ -105,7 +119,7 @@ MASS_UNITS = frozenset({"mg", "g", "kg", "oz", "lb"})
 # through these tables.
 VOLUME_IN_ML = {
     "ml": 1.0, "l": 1000.0, "fl oz": 29.5735,
-    "tsp": 4.92892, "tbsp": 14.7868, "cup": 236.588,
+    "tsp": 4.92892, "tbsp": 14.7868, "cup": 236.588, "gill": 118.294,
     "pint": 473.176, "quart": 946.353, "gallon": 3785.41,
 }
 MASS_IN_GRAMS = {

@@ -51,7 +51,7 @@ class RecipeIngredientInline(admin.TabularInline):
     model = RecipeIngredient
     extra = 1
     autocomplete_fields = ("ingredient",)
-    fields = ("ingredient", "quantity_text", "position")
+    fields = ("ingredient", "quantity_text", "raw_text", "position")
 
 
 class NutritionInline(admin.TabularInline):
@@ -70,9 +70,18 @@ class SubstitutionAdmin(admin.ModelAdmin):
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ("name", "servings", "total_time", "kcal", "protein_g", "tag_list")
-    list_filter = ("category",)
-    search_fields = ("name", "slug")
+    list_display = (
+        "name",
+        "servings",
+        "source",
+        "collection",
+        "total_time",
+        "kcal",
+        "protein_g",
+        "tag_list",
+    )
+    list_filter = ("category", "source", "collection")
+    search_fields = ("name", "slug", "source_id", "collection")
     inlines = [RecipeIngredientInline, NutritionInline]
 
     @admin.display(description="total time")

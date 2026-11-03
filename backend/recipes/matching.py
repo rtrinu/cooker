@@ -31,6 +31,12 @@ STOPWORDS = frozenset({
     "to", "in", "on", "into", "cut", "bite", "size", "strip", "strips",
     "floret", "florets", "leaf", "leaves", "optional", "finely", "coarsely",
     "thinly", "roughly", "well", "lightly", "about", "into",
+    # Size and state words historical recipes put before the food. They are
+    # not the food's identity, and leaving them in hides the head noun.
+    "large", "small", "medium", "big", "little", "ripe", "cold", "hot",
+    "warm", "sweet", "sour", "young", "old", "heaping", "level", "scant",
+    "packed", "sifted", "beaten", "divided", "separated", "room",
+    "temperature",
 })
 
 Token = re.compile(r"[a-z0-9]+")
@@ -38,9 +44,28 @@ Token = re.compile(r"[a-z0-9]+")
 Match = namedtuple("Match", ("ingredient", "strategy", "score"))
 
 
+def _singular(token):
+    """Fold simple English plurals so ``apples`` and ``apple`` meet.
+
+    Only the endings that are safe for food names are folded; words ending in
+    ``ss``, ``us`` or ``is`` (molasses, asparagus, anise) stay untouched.
+    """
+    if len(token) <= 3 or token.endswith(("ss", "us", "is")):
+        return token
+    if token.endswith("ies") and len(token) > 4:
+        return token[:-3] + "y"
+    if token.endswith("oes"):
+        return token[:-2]
+    if token.endswith(("ches", "shes", "xes", "zes")):
+        return token[:-2]
+    if token.endswith("s"):
+        return token[:-1]
+    return token
+
+
 def tokenize(text):
     """Lowercase word tokens, footnotes and punctuation dropped."""
-    return Token.findall(str(text or "").casefold())
+    return [_singular(token) for token in Token.findall(str(text or "").casefold())]
 
 
 def significant(tokens):
