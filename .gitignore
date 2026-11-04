@@ -17,6 +17,7 @@ local_settings.py
 sample_data/
 
 # Node
+.taste-skill/
 node_modules/
 dist/
 *.local

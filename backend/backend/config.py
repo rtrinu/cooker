@@ -1,4 +1,11 @@
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Load backend/.env for local development. Values already present in the
+# environment win, so deployments can continue to inject real env vars.
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 
 def env_bool(name, default=False):
