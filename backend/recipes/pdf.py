@@ -17,6 +17,8 @@ from collections import defaultdict
 
 import pdfplumber
 
+from .directions import clean_directions
+
 BANNER = "united states department of agriculture"
 CREDITING = "crediting information"
 PAGE_FOOTER = (
@@ -288,18 +290,16 @@ def _join_wrapped(lines):
 def _parse_nutrients(lines):
     """Printed "Nutrients Per Serving" panel as ``{field: float}``.
 
-    The panel is a single line on the home cards, so the numbers are read
-    label by label; only the five tracked fields are kept. Returns an empty
-    dict when the card carries no panel.
+    The panel is one line on most cards, but the two-column layout can split
+    it after "Total" in the left stream while the remainder starts the right
+    stream. Joining every line before searching keeps the labels and values
+    together; only the five tracked fields are kept. Returns an empty dict
+    when the card carries no panel.
     """
-    panel = ""
-    for raw in lines:
-        lowered = raw.lower()
-        if NUTRIENTS_HEADING in lowered:
-            panel = lowered.split(NUTRIENTS_HEADING, 1)[1]
-            break
-    if not panel:
+    text = "\n".join(str(line) for line in lines).lower()
+    if NUTRIENTS_HEADING not in text:
         return {}
+    panel = text.split(NUTRIENTS_HEADING, 1)[1]
     nutrients = {}
     for label, field in NUTRIENT_KEYS.items():
         match = re.search(re.escape(label) + r"[^0-9]*([0-9]+(?:\.[0-9]+)?)", panel)
@@ -593,7 +593,13 @@ def extract_recipe(pages):
                 serving_size = candidate
                 break
 
-    nutrients = _parse_nutrients(left_stream + right_stream + whole_stream)
+    # Read the panel from the unfiltered page text first: the column split can
+    # cut "Dietary Fiber" away from its value, and the next number in the left
+    # stream belongs to a vitamin row. The column streams are the fallback for
+    # the rarer cards whose whole-page text interleaves the two columns.
+    nutrients = _parse_nutrients(whole_stream)
+    if not nutrients:
+        nutrients = _parse_nutrients(left_stream + right_stream)
 
     if not ingredients:
         return None
@@ -606,6 +612,6 @@ def extract_recipe(pages):
         "prep_mins": prep_mins,
         "cook_mins": cook_mins,
         "ingredients": ingredients,
-        "directions": directions,
+        "directions": clean_directions(directions),
         "nutrients": nutrients,
     }

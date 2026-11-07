@@ -21,6 +21,7 @@ from collections import namedtuple
 from django.db import transaction
 from django.utils.text import slugify
 
+from .directions import directions_text
 from .matching import IngredientIndex
 from .models import NUTRIENT_FIELDS, Ingredient, Nutrition, Recipe, RecipeIngredient
 from .nutrition import compute
@@ -90,13 +91,30 @@ def _resolve(name, index):
     if match is not None:
         _add_alias(match.ingredient, normalized)
         return match.ingredient, True
-    ingredient = Ingredient.objects.create(name=normalized)
+    # A recipe can list the same ingredient twice ("salt" in the sauce and in
+    # the dough). The index is built once per recipe, so register each new row
+    # as it is created instead of failing the second line on the unique name.
+    ingredient, _ = Ingredient.objects.get_or_create(name=normalized)
+    index.by_name.setdefault(normalized, ingredient)
+    index.by_casefold.setdefault(normalized.casefold(), ingredient)
     return ingredient, False
 
 
 def _ingredient_lines(data):
-    """Yield ``(quantity_text, name)`` for each extracted ingredient line."""
+    """Yield ``(quantity_text, name)`` for each ingredient entry.
+
+    Parsers that already understand a source's ingredient syntax can hand in
+    ``{"quantity": ..., "name": ...}`` dictionaries; plain strings keep the
+    Team Nutrition card splitter used by the PDF importer.
+    """
     for line in data.get("ingredients") or []:
+        if isinstance(line, dict):
+            quantity = " ".join(str(line.get("quantity") or "").split())
+            name = " ".join(str(line.get("name") or "").split())
+            if not name:
+                continue
+            yield quantity[:QUANTITY_MAX_LENGTH], name[:NAME_MAX_LENGTH]
+            continue
         text = " ".join(str(line).split())
         if not text:
             continue
@@ -120,14 +138,29 @@ def _source_nutrition(data):
     return values
 
 
-def save_recipe(data, slug=None, dry_run=False):
-    """Create or update the recipe described by a ``parse_pdf`` dictionary."""
+METADATA_FIELDS = (
+    "source",
+    "source_id",
+    "source_title",
+    "source_year",
+    "license",
+    "attribution",
+    "collection",
+    "category",
+    "cuisine",
+    "contributor",
+    "source_url",
+)
+
+
+def save_recipe(data, slug=None, dry_run=False, metadata=None):
+    """Create or update the recipe described by a parsed recipe dictionary."""
     title = " ".join(str(data.get("title") or "").split()) or "Untitled recipe"
     recipe_slug = slugify(slug) if slug else slug_for(title)
     recipe_slug = recipe_slug or "recipe"
     servings = data.get("servings") or 1
     serving_size = " ".join(str(data.get("serving_size") or "").split())
-    directions = "\n".join(data.get("directions") or [])
+    directions = directions_text(data.get("directions"))
     lines = list(_ingredient_lines(data))
     source_nutrition = _source_nutrition(data)
 
@@ -153,6 +186,10 @@ def save_recipe(data, slug=None, dry_run=False):
         recipe.prep_mins = data.get("prep_mins")
         recipe.cook_mins = data.get("cook_mins")
         recipe.directions = directions
+        recipe.tags = [str(tag)[:80] for tag in (data.get("tags") or [])][:50]
+        for field in METADATA_FIELDS:
+            if metadata and field in metadata:
+                setattr(recipe, field, str(metadata[field] or "")[: recipe._meta.get_field(field).max_length])
         recipe.save()
 
         RecipeIngredient.objects.filter(recipe=recipe).delete()
@@ -180,7 +217,12 @@ def save_recipe(data, slug=None, dry_run=False):
         elif computed.lines_used:
             Nutrition.objects.update_or_create(
                 recipe=recipe,
-                defaults={**computed.per_serving, "method": "computed"},
+                defaults={
+                    **computed.per_serving,
+                    "method": "computed",
+                    "lines_used": computed.lines_used,
+                    "lines_total": computed.lines_total,
+                },
             )
         else:
             Nutrition.objects.filter(recipe=recipe).delete()

@@ -20,6 +20,7 @@ from recipes.management.commands.import_usda import (
     parse_publication_date,
     positive_int,
 )
+from recipes.ingredient_cleanup import normalize_ingredient, should_skip_category
 from recipes.units import normalize_measure
 
 SUPPORTED_DATA_TYPES = frozenset({"Foundation", "SR Legacy"})
@@ -325,10 +326,15 @@ def parse_bulk_food(food, require_all_nutrients=False):
             f"unsupported dataType {data_type or 'missing'}, expected {supported}"
         )
 
+    category = parse_category(food)
+    if should_skip_category(category):
+        # Restaurant/market products and baby food are not pantry ingredients.
+        return None
+    name, category = normalize_ingredient(parse_description(food), category)
     record = {
         "fdc_id": fdc_id,
-        "name": parse_description(food),
-        "category": parse_category(food),
+        "name": name,
+        "category": category,
         "publication_date": parse_publication_date(food.get("publicationDate")),
         "portions": parse_portions(food),
     }

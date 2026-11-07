@@ -1,6 +1,9 @@
 # Cooker
 
-A read-only archive of historical American recipes, with a Django Ninja API and a React frontend.
+Cook from what you have. Type pantry ingredients, rank recipes by how much of
+each ingredient list they cover, and read nutrition on the recipe page. Django
+Ninja API and a React frontend.
+
 Writes stay in the Django admin; the public surface is a typed, paginated REST API.
 
 ## Backend
@@ -22,11 +25,42 @@ Endpoints:
 
 - `GET /api/health`
 - `GET /api/stats`
-- `GET /api/recipes/` — `q`, `category`, `contributor`, `tag`, `page`, `page_size`
+- `GET /api/recipes/` — `q`, `category`, `cuisine`, `contributor`, `tag`, `page`, `page_size`
+- `GET /api/recipes/finder` — `ingredients`, `page`, `page_size`
 - `GET /api/recipes/{id}`
 - `GET /api/recipes/slug/{slug}`
 - `GET /api/ingredients/` — `q`, `category`, `page`, `page_size`
 - `GET /api/ingredients/{id}`
+
+## Recipe data
+
+The recipe fixtures are normalised JSON; the original PDF cards are no longer
+kept in the repository.
+
+- `backend/recipes/data/team-nutrition-recipes.json` — 30 USDA Team Nutrition
+  recipes with printed nutrition panels.
+- Public Domain Recipes are imported from Markdown and cached outside the repo.
+
+Re-import or refresh the data:
+
+```bash
+# Team Nutrition JSON fixture
+uv run python backend/manage.py import_recipe_json backend/recipes/data/team-nutrition-recipes.json
+
+# Public Domain Recipes Markdown collection
+uv run python backend/manage.py import_public_domain_recipes --refresh
+
+# Normalise stored directions and ingredient names
+uv run python backend/manage.py clean_directions
+uv run python backend/manage.py clean_ingredients
+```
+
+To convert a new set of Team Nutrition PDF cards before deleting them:
+
+```bash
+uv run python backend/manage.py export_recipe_json path/to/cards \
+  --output backend/recipes/data/team-nutrition-recipes.json
+```
 
 ## Frontend
 

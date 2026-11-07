@@ -58,6 +58,40 @@ class ApiTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["count"], 1)
         self.assertEqual(payload["items"][0]["name"], "Test Cake")
+        self.assertEqual(payload["items"][0]["nutrition"]["kcal"], 250)
+
+    def test_finder_ranks_partial_matches(self):
+        response = self.client.get(
+            "/recipes/finder", query_params={"ingredients": "flour, salt"}
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 1)
+        hit = payload["items"][0]
+        self.assertEqual(hit["recipe"]["name"], "Test Cake")
+        self.assertEqual(hit["matched"], ["flour"])
+        self.assertEqual(hit["missing"], ["Sugar"])
+        self.assertEqual(hit["matched_lines"], 1)
+        self.assertEqual(hit["total_lines"], 2)
+        self.assertEqual(payload["unmatched"], ["salt"])
+
+    def test_finder_returns_nothing_for_unknown_ingredient(self):
+        response = self.client.get(
+            "/recipes/finder", query_params={"ingredients": "dragonfruit"}
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 0)
+        self.assertEqual(payload["unmatched"], ["dragonfruit"])
+
+    def test_ingredient_suggestions_only_include_used_ingredients(self):
+        Ingredient.objects.create(name="Flour, unused", category="baking")
+        response = self.client.get(
+            "/ingredients/suggestions", query_params={"q": "flour"}
+        )
+        self.assertEqual(response.status_code, 200)
+        names = [item["name"] for item in response.json()]
+        self.assertEqual(names, ["Flour"])
 
     def test_filter_recipes(self):
         response = self.client.get("/recipes/", query_params={"q": "cake"})

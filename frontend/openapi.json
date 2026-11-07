@@ -158,6 +158,58 @@
         ]
       }
     },
+    "/api/recipes/finder": {
+      "get": {
+        "operationId": "recipes_routers_recipes_find_by_ingredients",
+        "summary": "Find By Ingredients",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ingredients",
+            "schema": {
+              "title": "Ingredients",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "default": 20,
+              "title": "Page Size",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinderOut"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
     "/api/recipes/slug/{slug}": {
       "get": {
         "operationId": "recipes_routers_recipes_get_recipe_by_slug",
@@ -305,6 +357,54 @@
         ]
       }
     },
+    "/api/ingredients/suggestions": {
+      "get": {
+        "operationId": "recipes_routers_ingredients_suggest_ingredients",
+        "summary": "Suggest Ingredients",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "default": "",
+              "title": "Q",
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 12,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IngredientOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "description": "Autocomplete limited to ingredients some recipe actually uses.\n\nThe USDA import adds thousands of foods nobody can cook with on their own\n(babyfood, restaurant items); sending those to the pantry input would make\nthe suggestion list useless.",
+        "tags": [
+          "ingredients"
+        ]
+      }
+    },
     "/api/ingredients/{ingredient_id}": {
       "get": {
         "operationId": "recipes_routers_ingredients_get_ingredient",
@@ -411,6 +511,54 @@
           }
         },
         "title": "Input",
+        "type": "object"
+      },
+      "NutritionOut": {
+        "properties": {
+          "kcal": {
+            "title": "Kcal",
+            "type": "number"
+          },
+          "protein_g": {
+            "title": "Protein G",
+            "type": "number"
+          },
+          "carbs_g": {
+            "title": "Carbs G",
+            "type": "number"
+          },
+          "fat_g": {
+            "title": "Fat G",
+            "type": "number"
+          },
+          "fiber_g": {
+            "title": "Fiber G",
+            "type": "number"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "lines_used": {
+            "default": 0,
+            "title": "Lines Used",
+            "type": "integer"
+          },
+          "lines_total": {
+            "default": 0,
+            "title": "Lines Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kcal",
+          "protein_g",
+          "carbs_g",
+          "fat_g",
+          "fiber_g",
+          "method"
+        ],
+        "title": "NutritionOut",
         "type": "object"
       },
       "PagedRecipeListOut": {
@@ -534,6 +682,16 @@
           "license": {
             "title": "License",
             "type": "string"
+          },
+          "nutrition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NutritionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -552,6 +710,86 @@
           "license"
         ],
         "title": "RecipeListOut",
+        "type": "object"
+      },
+      "FinderOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "ingredients": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ingredients",
+            "type": "array"
+          },
+          "unmatched": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unmatched",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FinderRecipeOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "ingredients",
+          "unmatched",
+          "items"
+        ],
+        "title": "FinderOut",
+        "type": "object"
+      },
+      "FinderRecipeOut": {
+        "properties": {
+          "recipe": {
+            "$ref": "#/components/schemas/RecipeListOut"
+          },
+          "matched": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Matched",
+            "type": "array"
+          },
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "matched_lines": {
+            "title": "Matched Lines",
+            "type": "integer"
+          },
+          "total_lines": {
+            "title": "Total Lines",
+            "type": "integer"
+          },
+          "pantry_coverage": {
+            "title": "Pantry Coverage",
+            "type": "number"
+          }
+        },
+        "required": [
+          "recipe",
+          "matched",
+          "missing",
+          "matched_lines",
+          "total_lines",
+          "pantry_coverage"
+        ],
+        "title": "FinderRecipeOut",
         "type": "object"
       },
       "IngredientOut": {
@@ -575,44 +813,6 @@
           "category"
         ],
         "title": "IngredientOut",
-        "type": "object"
-      },
-      "NutritionOut": {
-        "properties": {
-          "kcal": {
-            "title": "Kcal",
-            "type": "number"
-          },
-          "protein_g": {
-            "title": "Protein G",
-            "type": "number"
-          },
-          "carbs_g": {
-            "title": "Carbs G",
-            "type": "number"
-          },
-          "fat_g": {
-            "title": "Fat G",
-            "type": "number"
-          },
-          "fiber_g": {
-            "title": "Fiber G",
-            "type": "number"
-          },
-          "method": {
-            "title": "Method",
-            "type": "string"
-          }
-        },
-        "required": [
-          "kcal",
-          "protein_g",
-          "carbs_g",
-          "fat_g",
-          "fiber_g",
-          "method"
-        ],
-        "title": "NutritionOut",
         "type": "object"
       },
       "RecipeDetailOut": {
@@ -716,6 +916,16 @@
             "title": "License",
             "type": "string"
           },
+          "nutrition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NutritionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "directions": {
             "title": "Directions",
             "type": "string"
@@ -730,16 +940,6 @@
             },
             "title": "Ingredients",
             "type": "array"
-          },
-          "nutrition": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NutritionOut"
-              },
-              {
-                "type": "null"
-              }
-            ]
           }
         },
         "required": [

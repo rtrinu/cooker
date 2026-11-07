@@ -1,15 +1,24 @@
 import type { ReactNode } from 'react'
+import { Button } from './Button'
 
-export function LoadingRows({ label = 'Loading', rows = 5 }: { label?: string; rows?: number }) {
+export function LoadingRows({
+  label = 'Loading',
+  rows = 5,
+}: {
+  label?: string
+  rows?: number
+}) {
   return (
-    <div role="status" aria-label={label} className="space-y-2">
-      {Array.from({ length: rows }, (_, index) => (
-        <div key={index} className="bg-surface px-5 py-6">
-          <div className="h-5 w-2/3 bg-surface-deep" />
-          <div className="mt-3 h-3 w-1/3 bg-surface-deep" />
-        </div>
-      ))}
-      <span className="sr-only">{label}</span>
+    <div
+      role="status"
+      aria-label={`${label} (${rows} rows)`}
+      className="flex items-center gap-4 py-16"
+    >
+      <span
+        aria-hidden="true"
+        className="h-4 w-4 animate-pulse bg-ink motion-reduce:animate-none"
+      />
+      <p className="font-display text-head">{label}</p>
     </div>
   )
 }
@@ -22,27 +31,29 @@ export function ErrorState({
   onRetry?: () => void
 }) {
   return (
-    <div role="alert" className="bg-surface px-5 py-8">
-      <p className="font-display text-2xl">The archive did not answer.</p>
-      <p className="mt-2 text-sm text-muted">{message}</p>
+    <div role="alert" className="on-ink bg-ink px-6 py-10 text-field md:px-10">
+      <p className="font-display text-head text-heat">That request failed.</p>
+      <p className="mt-3 max-w-xl text-body text-field/70">{message}</p>
       {onRetry && (
-        <button
-          type="button"
-          onClick={onRetry}
-          className="mt-5 bg-accent px-4 py-2 text-sm text-paper transition-colors hover:bg-ink"
-        >
+        <Button tone="heat" className="mt-6" onClick={onRetry}>
           Try again
-        </button>
+        </Button>
       )}
     </div>
   )
 }
 
-export function EmptyState({ children }: { children: ReactNode }) {
+export function EmptyState({
+  children,
+  title = 'Nothing here yet.',
+}: {
+  children: ReactNode
+  title?: string
+}) {
   return (
-    <div className="bg-surface px-5 py-10">
-      <p className="font-display text-2xl">Nothing here yet.</p>
-      <p className="mt-2 max-w-lg text-sm text-muted">{children}</p>
+    <div className="bg-ember px-6 py-10 md:px-10">
+      <p className="font-display text-head">{title}</p>
+      <p className="mt-3 max-w-xl text-body text-ink/80">{children}</p>
     </div>
   )
 }

@@ -2,8 +2,9 @@ from ninja import Router
 from ninja.errors import HttpError
 from ninja.pagination import PageNumberPagination, paginate
 
+from ..finder import find_recipes, pantry_terms
 from ..models import Recipe
-from ..schemas import RecipeDetailOut, RecipeListOut
+from ..schemas import FinderOut, RecipeDetailOut, RecipeListOut
 
 router = Router(tags=["recipes"])
 
@@ -26,14 +27,17 @@ def list_recipes(
     request,
     q: str | None = None,
     category: str | None = None,
+    cuisine: str | None = None,
     contributor: str | None = None,
     tag: str | None = None,
 ):
-    recipes = Recipe.objects.order_by("name")
+    recipes = Recipe.objects.select_related("nutrition").order_by("name")
     if q:
         recipes = recipes.filter(name__icontains=q)
     if category:
         recipes = recipes.filter(category=category)
+    if cuisine:
+        recipes = recipes.filter(cuisine=cuisine)
     if contributor:
         recipes = recipes.filter(contributor__icontains=contributor)
     if tag:
@@ -41,6 +45,37 @@ def list_recipes(
         # text match against the serialized list. Good enough for filtering.
         recipes = recipes.filter(tags__icontains=tag)
     return recipes
+
+
+@router.get("/finder", response=FinderOut)
+def find_by_ingredients(
+    request,
+    ingredients: str,
+    page: int = 1,
+    page_size: int = 20,
+):
+    recipes = Recipe.objects.select_related("nutrition").prefetch_related(
+        "ingredients__ingredient"
+    )
+    count, _, hits, unmatched = find_recipes(
+        recipes, ingredients, page=page, page_size=page_size
+    )
+    return {
+        "count": count,
+        "ingredients": [term.display for term in pantry_terms(ingredients)],
+        "unmatched": unmatched,
+        "items": [
+            {
+                "recipe": hit.recipe,
+                "matched": hit.matched,
+                "missing": hit.missing,
+                "matched_lines": hit.matched_lines,
+                "total_lines": hit.total_lines,
+                "pantry_coverage": hit.pantry_coverage,
+            }
+            for hit in hits
+        ],
+    }
 
 
 @router.get("/slug/{slug}", response=RecipeDetailOut)

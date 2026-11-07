@@ -91,6 +91,7 @@ class Recipe(models.Model):
     cook_mins = models.PositiveIntegerField(null=True, blank=True)
     tags = models.JSONField(default=list, blank=True)
     category = models.CharField(max_length=50, blank=True)
+    cuisine = models.CharField(max_length=50, blank=True, db_index=True)
     contributor = models.CharField(max_length=100, blank=True)
     source_url = models.URLField(blank=True)
     directions = models.TextField(blank=True)
@@ -146,6 +147,11 @@ class Nutrition(models.Model):
         choices=(("computed", "computed"), ("source", "source")),
         default="source",
     )
+    # How many ingredient lines the computation actually resolved. Source
+    # panels cover the whole recipe, so they leave both at zero and the UI
+    # reads the method instead of a ratio.
+    lines_used = models.PositiveIntegerField(default=0)
+    lines_total = models.PositiveIntegerField(default=0)
 
 
 class Substitution(models.Model):

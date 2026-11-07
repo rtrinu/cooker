@@ -8,6 +8,9 @@ export const api = createClient<paths>({
 export type RecipeList = components['schemas']['RecipeListOut']
 export type RecipeDetail = components['schemas']['RecipeDetailOut']
 export type RecipeIngredient = components['schemas']['RecipeIngredientOut']
+export type Nutrition = components['schemas']['NutritionOut']
+export type FinderResult = components['schemas']['FinderOut']
+export type FinderRecipe = components['schemas']['FinderRecipeOut']
 export type Ingredient = components['schemas']['IngredientOut']
 export type Stats = components['schemas']['StatsOut']
 export type CategoryCount = components['schemas']['CategoryCountOut']
@@ -58,6 +61,38 @@ export async function getRecipeBySlug(slug: string) {
   return unwrap(
     await api.GET('/api/recipes/slug/{slug}', {
       params: { path: { slug } },
+    }),
+  )
+}
+
+export type FinderQuery = {
+  ingredients: string
+  page?: number
+  pageSize?: number
+}
+
+export async function getFinder({
+  ingredients,
+  page = 1,
+  pageSize = 20,
+}: FinderQuery) {
+  return unwrap(
+    await api.GET('/api/recipes/finder', {
+      params: {
+        query: {
+          ingredients,
+          page,
+          page_size: pageSize,
+        },
+      },
+    }),
+  )
+}
+
+export async function getIngredientSuggestions(q: string) {
+  return unwrap(
+    await api.GET('/api/ingredients/suggestions', {
+      params: { query: { q } },
     }),
   )
 }

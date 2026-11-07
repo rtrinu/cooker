@@ -6,6 +6,7 @@ from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
 from django.db import IntegrityError, transaction
 
+from recipes.ingredient_cleanup import normalize_ingredient
 from recipes.management.commands.import_usda import (
     NUTRIENT_FIELDS,
     SOURCE,
@@ -103,7 +104,7 @@ def validate_snapshot(snapshot):
         records.append(
             {
                 "fdc_id": fdc_id,
-                "name": description,
+                "name": normalize_ingredient(description)[0],
                 **values,
             }
         )

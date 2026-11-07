@@ -13,6 +13,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import IntegrityError, transaction
 
+from recipes.ingredient_cleanup import normalize_ingredient, should_skip_category
 from recipes.models import Ingredient, IngredientMeasure, IngredientNutrition
 
 SOURCE = "USDA FoodData Central"
@@ -183,8 +184,14 @@ def parse_food(food, requested_fdc_id):
     if data_type and data_type != "Foundation":
         raise USDADataError(f"unsupported USDA data type: {data_type}")
 
+    category = (food.get("foodCategory") or {}).get("description") or ""
+    if should_skip_category(category):
+        raise USDADataError(f"category is not a pantry ingredient: {category}")
+    name, category = normalize_ingredient(parse_description(food), category)
+
     return {
-        "name": parse_description(food),
+        "name": name,
+        "category": category,
         "publication_date": parse_publication_date(food.get("publicationDate")),
         **extract_nutrients(food),
     }
@@ -429,6 +436,7 @@ class Command(BaseCommand):
                     result = upsert_food(
                         parsed,
                         fdc_id,
+                        category=parsed.get("category"),
                         publication_date=parsed.get("publication_date"),
                         portions=parse_portions(food),
                     )

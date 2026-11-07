@@ -52,6 +52,8 @@ class NutritionOut(Schema):
     fat_g: float
     fiber_g: float
     method: str
+    lines_used: int = 0
+    lines_total: int = 0
 
 
 class RecipeListOut(Schema):
@@ -65,6 +67,7 @@ class RecipeListOut(Schema):
     cook_mins: int | None = None
     tags: list[str]
     category: str
+    cuisine: str
     contributor: str
     source: str
     source_url: str
@@ -72,17 +75,38 @@ class RecipeListOut(Schema):
     source_year: str
     collection: str
     license: str
+    nutrition: NutritionOut | None = None
 
 
 class RecipeDetailOut(RecipeListOut):
     directions: str
     attribution: str
     ingredients: list[RecipeIngredientOut]
-    nutrition: NutritionOut | None = None
+
+
+class FinderRecipeOut(Schema):
+    recipe: RecipeListOut
+    matched: list[str]
+    missing: list[str]
+    matched_lines: int
+    total_lines: int
+    pantry_coverage: float
+
+
+class FinderOut(Schema):
+    count: int
+    ingredients: list[str]
+    unmatched: list[str]
+    items: list[FinderRecipeOut]
 
 
 class CategoryCountOut(Schema):
     category: str
+    count: int
+
+
+class CuisineCountOut(Schema):
+    cuisine: str
     count: int
 
 
@@ -91,3 +115,4 @@ class StatsOut(Schema):
     ingredients: int
     collections: int
     categories: list[CategoryCountOut]
+    cuisines: list[CuisineCountOut]

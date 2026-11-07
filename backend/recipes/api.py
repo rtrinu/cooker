@@ -36,4 +36,10 @@ def stats(request):
             .annotate(count=Count("id"))
             .order_by("-count", "category")
         ),
+        "cuisines": list(
+            Recipe.objects.exclude(cuisine="")
+            .values("cuisine")
+            .annotate(count=Count("id"))
+            .order_by("-count", "cuisine")
+        ),
     }

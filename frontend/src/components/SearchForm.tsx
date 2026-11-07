@@ -1,4 +1,5 @@
 import { useId, useState, type FormEvent } from 'react'
+import { Button } from './Button'
 
 type SearchFormProps = {
   initialValue?: string
@@ -34,14 +35,11 @@ export default function SearchForm({
         value={value}
         onChange={(event) => setValue(event.target.value)}
         placeholder={placeholder}
-        className="min-w-0 flex-1 bg-surface px-4 py-3 text-base text-ink outline-none placeholder:text-muted/80 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+        className="min-h-14 min-w-0 flex-1 bg-ink px-5 text-body text-field outline-none placeholder:text-field/50 focus-visible:outline-3 focus-visible:outline-offset-[-3px] focus-visible:outline-heat"
       />
-      <button
-        type="submit"
-        className="bg-accent px-5 py-3 text-sm font-medium text-paper transition-colors hover:bg-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-      >
+      <Button type="submit" tone="ink">
         {buttonLabel}
-      </button>
+      </Button>
     </form>
   )
 }

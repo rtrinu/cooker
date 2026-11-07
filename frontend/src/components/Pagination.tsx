@@ -25,12 +25,15 @@ export default function Pagination({
   const pages = pageWindow(page, totalPages)
 
   return (
-    <nav aria-label="Pagination" className="mt-10 flex flex-wrap items-center gap-2">
+    <nav
+      aria-label="Pagination"
+      className="mt-12 flex flex-wrap items-center gap-2"
+    >
       <button
         type="button"
         onClick={() => onPageChange(page - 1)}
         disabled={page <= 1}
-        className="bg-surface px-4 py-2 text-sm transition-colors hover:bg-surface-deep disabled:cursor-not-allowed disabled:opacity-40"
+        className="min-h-11 bg-ink px-4 text-sm font-semibold text-heat transition-colors hover:bg-field hover:text-ink disabled:cursor-not-allowed disabled:bg-ink/10 disabled:text-ink/40"
       >
         Previous
       </button>
@@ -40,10 +43,10 @@ export default function Pagination({
           type="button"
           onClick={() => onPageChange(number)}
           aria-current={number === page ? 'page' : undefined}
-          className={`min-w-10 px-3 py-2 text-sm transition-colors ${
+          className={`min-h-11 min-w-11 px-3 text-sm font-semibold transition-colors ${
             number === page
-              ? 'bg-accent text-paper'
-              : 'bg-surface hover:bg-surface-deep'
+              ? 'bg-ink text-heat'
+              : 'bg-ink/10 text-ink hover:bg-ink hover:text-heat'
           }`}
         >
           {number}
@@ -53,11 +56,11 @@ export default function Pagination({
         type="button"
         onClick={() => onPageChange(page + 1)}
         disabled={page >= totalPages}
-        className="bg-surface px-4 py-2 text-sm transition-colors hover:bg-surface-deep disabled:cursor-not-allowed disabled:opacity-40"
+        className="min-h-11 bg-ink px-4 text-sm font-semibold text-heat transition-colors hover:bg-field hover:text-ink disabled:cursor-not-allowed disabled:bg-ink/10 disabled:text-ink/40"
       >
         Next
       </button>
-      <span className="ml-2 text-sm text-muted">
+      <span className="ml-auto text-sm text-muted-field">
         Page {page} of {totalPages}
       </span>
     </nav>

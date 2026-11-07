@@ -1,0 +1,1161 @@
+{
+  "source": "usda-team-nutrition",
+  "source_title": "USDA Team Nutrition",
+  "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes",
+  "license": "Public domain (U.S. Government work)",
+  "attribution": "USDA Team Nutrition, Recipes for Healthy Kids. U.S. Government work, public domain.",
+  "collection": "usda-team-nutrition",
+  "category": "modern",
+  "recipes": [
+    {
+      "source_id": "AztecGrainSaladCACFPhomerecipe",
+      "name": "Aztec Grain Salad",
+      "description": "",
+      "servings": 6,
+      "serving_size": "1-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "1 ½ cups Quinoa, dry",
+        "1 ¾ cups Fresh granny smith apples, peeled, cored, cubed",
+        "1 ¾ cups Fresh butternut squash, peeled, seeded, cubed",
+        "1 Tbsp Canola oil",
+        "¼ tsp Ground ginger",
+        "¾ tsp Ground cinnamon",
+        "¼ cup Frozen orange juice concentrate",
+        "1 ½ Tbsp Extra virgin olive oil",
+        "1 tsp Honey",
+        "L tsp Dijon mustard",
+        "2 Tbsp Red wine vinegar",
+        "V tsp Salt",
+        "1 dash Ground black pepper",
+        "1 dash Ground white pepper",
+        "½ tsp Fresh cilantro, chopped",
+        "L cup Dried cranberries, finely chopped",
+        "L cup Golden raisins, seedless, finely chopped"
+      ],
+      "directions": [
+        "Preheat oven to 400 °F.",
+        "Rinse quinoa in a fine mesh strainer until water runs clear, not cloudy. Combine quinoa and 3 cups water in a medium pot. Cover and bring to a boil. Turn heat down to low and simmer until water is completely absorbed, about 10-15 minutes. When done, quinoa will be soft and a white ring will pop out of the kernel. The white ring will appear only when it is fully cooked. Fluff with a fork. Cover and refrigerate. A rice cooker may be used with the same quantity of quinoa and water.",
+        "Combine apples and squash in a large mixing bowl. Add canola oil, V tsp ginger, and ¼ tsp cinnamon. Toss well to coat.",
+        "Pour apples/squash mixture onto a large baking sheet and place in oven at 400 °F. Roast for 15 minutes or until squash is soft and slightly brown on the edges. Do not overcook. Remove and set aside to cool.",
+        "In a medium mixing bowl, combine orange juice, olive oil, honey, Dijon mustard, red wine vinegar, salt, peppers, cilantro, and remaining ginger and cinnamon. Whisk together to make dressing."
+      ],
+      "nutrients": {
+        "kcal": 298.0,
+        "protein_g": 6.0,
+        "carbs_g": 54.0,
+        "fat_g": 8.0,
+        "fiber_g": 6.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "BokChoyWrappersCACFPhomerecipe",
+      "name": "Bok Choy Wrappers",
+      "description": "",
+      "servings": 12,
+      "serving_size": "2 wraps",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "1 ½ cups Brown rice, long-grain, regular, dry",
+        "1 ¾ cups Fresh bok choy, sliced ¼”",
+        "1 ¾ cups Canned pineapple tidbits, in 100% juice",
+        "3 cups Cooked chicken strips (12 oz)",
+        "¾ cup Sweet and sour sauce",
+        "1 tsp Low-sodium soy sauce leaves Fresh romaine lettuce, outer leaves"
+      ],
+      "directions": [
+        "Preheat oven to 350 °F.",
+        "Combine brown rice and 3 ½ cups water in a large pot and bring to a rolling boil. Turn heat down to low. Cover and cook until water is absorbed, about 30-40 minutes. Fluff with a fork. A rice cooker may be used with the same quantity of brown rice and water.",
+        "In a medium bowl, combine brown rice, bok choy, pineapple, chicken, sweet and sour sauce, and soy sauce.",
+        "Transfer mixture to an 8” x 8” nonstick baking pan coated with nonstick cooking spray. Bake at 350 °F for 30 minutes. Cook to an internal temperature of 165 °F or higher for at least 15 seconds (use a food thermometer to check the internal temperature).",
+        "Place two lettuce leaves on a plate. Top each with ¾ cup filling. Optional: garnish with diced red peppers. Fold sides of lettuce in toward center; roll up like burrito. Place seam side down. Serve warm."
+      ],
+      "nutrients": {
+        "kcal": 376.0,
+        "protein_g": 13.0,
+        "carbs_g": 56.0,
+        "fat_g": 11.0,
+        "fiber_g": 5.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "CentralValleyHarvestBakeCACFPhomerecipe",
+      "name": "Central Valley Harvest Bake",
+      "description": "",
+      "servings": 6,
+      "serving_size": "½-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "3 cups Fresh butternut squash, peeled, seeded, cubed ½”",
+        "2 tsp Extra virgin olive oil",
+        "L cup Fresh red onions, peeled, diced",
+        "2 ¼ tsp Fresh jalapeno pepper, seeded, diced",
+        "¼ cup Fresh red bell pepper, seeded, diced",
+        "1 Tbsp Red quinoa, dry",
+        "¼ cup Canned low-sodium black beans, drained, rinsed",
+        "3 ½ tsp Fresh oregano, chopped",
+        "2 ½ Tbsp Sweetened applesauce",
+        "¼ tsp Kosher salt",
+        "2 Tbsp Fresh lime juice (optional)",
+        "O cup Low-fat granola, no fruit"
+      ],
+      "directions": [
+        "Preheat oven to 350 °F.",
+        "In a large bowl, toss squash in 1 tsp olive oil. Spread onto a large baking sheet sprayed with nonstick cooking spray. Roast in oven at 350 °F for 30 minutes or until tender and lightly brown around the edges. Remove and keep warm.",
+        "In a small bowl, toss onions, jalapeno peppers, and red peppers with remaining olive oil. Spread vegetables evenly onto a baking sheet sprayed with a nonstick cooking spray and roast in oven at 350 °F for 15 minutes or until tender and lightly brown around the edges. Check the vegetables often, they will brown very quickly. Remove and keep warm.",
+        "Rinse quinoa in a fine mesh strainer until water runs clear, not cloudy. Combine quinoa and ½ cup water in a small pot. Cover and bring to a boil. Turn heat down to low and simmer until water is completely absorbed, about 10-15 minutes. When done, quinoa will be soft and a white ring will pop out of the kernel. The white ring will appear only when it is fully cooked. Fluff with a fork. Set aside. A rice cooker may be used with the same quantity of quinoa and water.",
+        "In a large bowl, combine squash, black beans, quinoa, and oregano."
+      ],
+      "nutrients": {
+        "kcal": 97.0,
+        "protein_g": 2.0,
+        "carbs_g": 20.0,
+        "fat_g": 2.0,
+        "fiber_g": 4.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "ChicPenneCACFPhomerecipe",
+      "name": "Chic’ Penne",
+      "description": "",
+      "servings": 6,
+      "serving_size": "1 ½-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "3 cups Penne pasta, whole-wheat, dry (12 oz)",
+        "1 tsp Granulated garlic",
+        "2 cups Fresh broccoli florets",
+        "1 cup Cooked diced chicken, ½” pieces (4 oz)",
+        "1 ½ cups Fat-free half and half",
+        "1 Tbsp Enriched all-purpose flour",
+        "V cup Low-sodium chicken broth",
+        "1 tsp Salt",
+        "½ tsp Ground black pepper",
+        "½ cup Reduced-fat cheddar cheese, shredded (2 oz)",
+        "½ cup Low-fat mozzarella cheese, low-moisture, part-skim, shredded"
+      ],
+      "directions": [
+        "Preheat oven to 350 °F.",
+        "In a large pot, bring 2 quarts water to a boil. Gradually stir in pasta and return to a boil. Cook uncovered for 8-10 minutes or until tender. Do not overcook. Drain well. Toss pasta with ½ teaspoon garlic.",
+        "Fill a medium pot with water and bring to a boil. Add broccoli florets and cook for 5 minutes. Drain well. Sprinkle with remaining garlic.",
+        "Transfer pasta and broccoli to a medium casserole dish (about 8” x 11”) coated with nonstick cooking spray. Add chicken. Mix well.",
+        "In a small mixing bowl, mix ½ cup half and half with flour. Whisk to remove lumps.",
+        "In a medium skillet, heat chicken broth, salt, pepper, and remaining half and half. Stir constantly. Stir in half and half/flour mixture. Stir constantly and bring to a boil.",
+        "Reduce heat to low. Stir frequently for 5 minutes. Sauce will thicken. Add cheese and stir until cheese melts. Remove from heat. Pour sauce over broccoli/pasta mixture.",
+        "Cover casserole dish with lid or with foil. Bake at 350 °F for 8 minutes. Heat to an internal temperature of 165 °F or higher for at least 15 seconds (use a food thermometer to check the internal temperature). Remove from oven. Serve hot."
+      ],
+      "nutrients": {
+        "kcal": 300.0,
+        "protein_g": 19.0,
+        "carbs_g": 44.0,
+        "fat_g": 6.0,
+        "fiber_g": 6.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "ChickenAlfredoWithaTwistCACFPhomerecipe",
+      "name": "Chicken Alfredo With a Twist",
+      "description": "",
+      "servings": 6,
+      "serving_size": "1-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "2 ½ cups Rotini pasta, whole-wheat, dry (10 oz)",
+        "2 cans Low-fat, reduced-sodium cream of chicken soup",
+        "1 L cups Fat-free half and half",
+        "¼ tsp Ground white pepper",
+        "V tsp Garlic powder",
+        "L cup Grated parmesan cheese",
+        "3 cups Cooked diced chicken, ½” pieces (12 oz)"
+      ],
+      "directions": [
+        "In a large pot, bring 2 quarts water to a boil. Gradually stir in pasta and return to a boil. Cook uncovered about 8-10 minutes or until tender. Do not overcook. Drain well.",
+        "Mix soup, half-and-half, pepper, garlic powder, parmesan cheese, and chicken in a large pot. Cook for 5 minutes over medium heat, stirring often. Heat to 165 °F or higher for at least 15 seconds",
+        "Combine noodles and sauce right before serving. Serve hot."
+      ],
+      "nutrients": {
+        "kcal": 345.0,
+        "protein_g": 30.0,
+        "carbs_g": 41.0,
+        "fat_g": 8.0,
+        "fiber_g": 3.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "ChickenCurryCasseroleCACFPhomerecipe",
+      "name": "Chicken Curry Casserole",
+      "description": "",
+      "servings": 6,
+      "serving_size": "¾-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "1 cup Brown rice, long-grain, regular, dry",
+        "1 Tbsp Canola oil",
+        "¼ cup Low-sodium chicken broth",
+        "¾ cup Fresh celery",
+        "1 cup Fresh onions, peeled, diced",
+        "1 ¼ cups Fresh carrots, peeled, shredded",
+        "1 ½ tsp Curry powder",
+        "1 tsp Garlic powder",
+        "½ tsp Ground black pepper",
+        "¾ tsp Salt",
+        "½ cup Low-fat plain yogurt",
+        "2 cups Cooked fajita chicken strips, diced 1” (12 oz)"
+      ],
+      "directions": [
+        "Preheat oven to 400 °F.",
+        "Combine brown rice and 2 ½ cups water in large pot and bring to a boil. Turn heat down to low. Cover and cook until water is absorbed, about 30-40 minutes. Fluff with a fork. Set aside. A rice cooker may be used with the same quantity of brown rice and water.",
+        "In a large pan, heat canola oil and chicken broth over medium heat for 2-3 minutes. Add celery, onions, and carrots. Cook an additional 5-7 minutes or until vegetables are tender.",
+        "In a large mixing bowl, combine curry powder, garlic powder, pepper, salt, and yogurt. Add vegetables, brown rice, and chicken. Mix well.",
+        "Pour mixture into a 9” x 9” nonstick baking pan. Bake uncovered at 400 °F for 15 minutes. Heat to an internal temperature of 165 °F or higher for at least 15 seconds (use a food thermometer to check the internal temperature). Serve hot. vegetable, and ¾ oz equivalent grains."
+      ],
+      "nutrients": {
+        "kcal": 220.0,
+        "protein_g": 14.0,
+        "carbs_g": 26.0,
+        "fat_g": 6.0,
+        "fiber_g": 3.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "ConfettiSoupCACFPhomerecipe",
+      "name": "Confetti Soup",
+      "description": "",
+      "servings": 6,
+      "serving_size": "1-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "1 ¾ tsp Canola oil",
+        "¾ cup Fresh onions, peeled, diced",
+        "¾ cup Fresh celery, diced",
+        "¾ cup Fresh carrots, peeled, diced",
+        "½ tsp Salt",
+        "½ tsp Ground black pepper fennel seed",
+        "V tsp Crushed red pepper (optional)",
+        "1 ½ cups Canned low-sodium black-eyed peas, drained, rinsed",
+        "3 ½ cups Water",
+        "1 cup Extra-lean turkey ham, diced ¼” (6 oz)",
+        "L cup Fresh kale, coarsely chopped",
+        "1 ½ Tbsp Fresh parsley, chopped"
+      ],
+      "directions": [
+        "In a large pot, heat oil over medium-high heat. Add onions and celery. Cook for 2-3 minutes or until tender. Add carrots, salt, pepper, fennel seed, and optional crushed red pepper. Cook for an additional 2-3 minutes.",
+        "Add black-eyed peas and water. Cook uncovered for 25 minutes over medium heat.",
+        "Add turkey ham and kale. Cook covered for an additional 10 minutes over medium heat until kale is tender.",
+        "Add parsley right before serving. Serve hot. 1 cup provides: Legume as Meat Alternate: 1 ½ oz equivalent meat/meat alternate and ¼ cup vegetable. OR Legume as Vegetable: ½ oz equivalent meat and ½ cup vegetable. Legume vegetable can be counted as either a meat alternate or as a legume vegetable but not as both simultaneously."
+      ],
+      "nutrients": {
+        "kcal": 94.0,
+        "protein_g": 8.0,
+        "carbs_g": 10.0,
+        "fat_g": 3.0,
+        "fiber_g": 3.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "CrunchyHawaiianChickenWrapCACFPhomerecipe",
+      "name": "Crunchy Hawaiian Chicken Wrap",
+      "description": "",
+      "servings": 6,
+      "serving_size": "wraps",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "¼ cup Light mayonnaise",
+        "V cup White vinegar",
+        "¼ cup Sugar",
+        "1 tsp Poppy seeds",
+        "1 ½ tsp Garlic powder",
+        "1 ½ tsp Onion powder",
+        "1 ½ tsp Chili powder",
+        "2 cups Fresh broccoli, shredded",
+        "1 ½ cups Fresh carrots, peeled, shredded",
+        "¼ cup Canned crushed pineapple, in 100% juice, drained",
+        "1 cup Fresh baby spinach, chopped",
+        "3 cups Cooked diced chicken, ½” pieces (12 oz)",
+        "6 Whole-wheat tortillas, 10”"
+      ],
+      "directions": [
+        "In a small mixing bowl, combine mayonnaise, vinegar, sugar, poppy seeds, garlic powder, onion powder, and chili powder for the dressing. Mix well. Cover and refrigerate.",
+        "Combine broccoli, carrots, pineapple, and spinach in a large bowl. Stir in dressing and chicken. Mix well. Serve immediately or cover and refrigerate. of the tortilla and roll in the form of a burrito. Place seam side down. Cut diagonally. Serve immediately."
+      ],
+      "nutrients": {
+        "kcal": 308.0,
+        "protein_g": 24.0,
+        "carbs_g": 42.0,
+        "fat_g": 6.0,
+        "fiber_g": 5.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "EaglePizzaCACFPhomerecipe",
+      "name": "Eagle Pizza",
+      "description": "",
+      "servings": 6,
+      "serving_size": "tostada pizzas",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "½ cup Fresh spinach, julienne cut “shoestring strips”",
+        "½ cup Fresh romaine lettuce, julienne cut “shoestring strips”",
+        "2 ¼ tsp Salt-free chili-lime seasoning blend*",
+        "1 ¾ cups Canned low-sodium refried beans, fat-free",
+        "¾ cup Fresh green bell pepper, seeded, diced",
+        "¾ cup Fresh onions, peeled, diced",
+        "1 ¼ cups Canned low-sodium corn, drained, rinsed",
+        "6 Whole-grain tostada shells",
+        "6 Tbsp Reduced-fat Mexican cheese blend, shredded",
+        "1 cup Fresh carrots, peeled, shredded",
+        "½ cup Low-sodium salsa, mild",
+        "½ cup Fat-free sour cream"
+      ],
+      "directions": [
+        "Preheat oven to 350 °F.",
+        "Combine spinach and lettuce in bowl and set aside.",
+        "In a medium mixing bowl, combine salt-free seasoning blend and refried beans. Set aside.",
+        "In a small skillet, coated with nonstick cooking spray, cook green peppers, onions, and corn for 3-4 minutes. Set aside. shell. Spread mixture evenly using the back of a spoon. Top with L cup sautéed vegetable mixture. Lightly sprinkle 1 Tbsp of cheese on top.",
+        "Place tostadas on a large baking sheet coated with nonstick cooking spray. Bake until cheese is melted, about 2 minutes.",
+        "Remove tostadas from oven. Top each tostada with: About 1 Tbsp spinach/lettuce mixture About 2 ½ Tbsp carrots About 1 Tbsp salsa About 1 Tbsp sour cream Serve immediately."
+      ],
+      "nutrients": {
+        "kcal": 206.0,
+        "protein_g": 9.0,
+        "carbs_g": 32.0,
+        "fat_g": 6.0,
+        "fiber_g": 6.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "FiestaMexicanLasagnaCACFPhomerecipe",
+      "name": "Fiesta Mexican Lasagna",
+      "description": "",
+      "servings": 6,
+      "serving_size": "",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "66 chips Low-sodium tortilla chips (about 12 oz)",
+        "2 tsp Canola oil",
+        "¼ cup Fresh green bell pepper, seeded, diced",
+        "1 cup Canned low-sodium corn, drained, rinsed",
+        "1 cup Fresh onions, peeled, diced",
+        "2 cups Fresh butternut squash, peeled, seeded, cubed ½”",
+        "½ tsp Ground oregano",
+        "½ tsp Ground cumin",
+        "½ tsp Granulated garlic",
+        "½ tsp Chili powder",
+        "½ tsp Paprika",
+        "½ tsp Salt",
+        "2 ½ cups C anned low-sodium black beans, drained, rinsed",
+        "1 ¼ cups Low-sodium meatless spaghetti sauce",
+        "1 cup Low-sodium salsa, mild"
+      ],
+      "directions": [
+        "Preheat oven to 350 °F.",
+        "Divide chips evenly into three bowls (about 22 chips per bowl). Crumble one bowl of chips and reserve remaining two bowls of whole chips for use during the layering process.",
+        "In a medium mixing bowl, combine canola oil, green pepper, corn, and ½ cup of onions, reserving other half of onions for step 6. Toss to evenly coat with oil. Transfer vegetables to a large baking sheet. Roast uncovered at",
+        "°F for 15 minutes or until vegetables are slightly brown around the edges.",
+        "Steam squash in a steam basket over high heat for 15 minutes or until soft. Place squash in a large mixing bowl and mash until smooth.",
+        "Add roasted vegetables to squash. Mix well. Add ¼ teaspoon oregano and ¼ teaspoon cumin, reserving remaining spices for step 6. Mix well and set aside.",
+        "In a medium skillet coated with nonstick cooking spray, cook remaining onions, cumin, and oregano with garlic, chili powder, paprika, and salt over medium heat for 5 minutes or until the onions become translucent and soft.",
+        "Purée cooked onions and black beans in a food processor or blender until smooth. If needed, add 1-2 tablespoons of water to make the purée smoother. One piece provides: Legume as Meat Alternate: 1 oz equivalent meat alternate, ¾ cup vegetable, and ¾ oz equivalent grains. OR Legume as Vegetable: 1 cup vegetable and ¾ oz equivalent grains. Legume vegetable can be counted as either a meat alternate or as a legume vegetable but not as both simultaneously."
+      ],
+      "nutrients": {
+        "kcal": 264.0,
+        "protein_g": 9.0,
+        "carbs_g": 52.0,
+        "fat_g": 4.0,
+        "fiber_g": 9.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "FiestaWrapCACFPhomerecipe",
+      "name": "Fiesta Wrap",
+      "description": "",
+      "servings": 6,
+      "serving_size": "wraps",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "¼ cup Quinoa, dry",
+        "2 ¼ cups C anned low-sodium black beans, drained, rinsed",
+        "¼ cup Fresh red bell pepper, seeded, diced",
+        "¼ cup Fresh red onions, peeled, diced",
+        "½ cup Fresh carrots, peeled, shredded",
+        "¼ cup Reduced-fat white cheddar cheese, shredded (1 oz)",
+        "1 tsp Chili powder",
+        "1 ¼ tsp Ground cumin",
+        "1 ¼ tsp Fresh Lime juice",
+        "6 Whole-wheat tortillas, 6”",
+        "1 Tbsp Vegetable oil"
+      ],
+      "directions": [
+        "Preheat oven to 325 °F.",
+        "Rinse quinoa in a fine mesh strainer until water runs clear, not cloudy. Combine quinoa and ¾ cup water in a small pot. Cover and bring to a boil. Turn heat down to low and simmer until water is completely absorbed, about 10-15 minutes. When done, quinoa will be soft and a white ring will pop out of the kernel. The white ring will appear only when it is fully cooked. Fluff with a fork and set aside. A rice cooker may be used with the same quantity of quinoa and water.",
+        "Place black beans in a large mixing bowl. Lightly mash beans by squeezing them using gloved hands (at least 50 percent of the beans should appear whole). Be careful not to over-mash beans.",
+        "To make filling, add to the mashed beans the quinoa, red peppers, red onions, carrots, cheese, chili powder, cumin, and lime juice. half of tortilla and roll in the form of a burrito. The wrap may also be folded in half like a taco.",
+        "Brush filled wraps lightly with vegetable oil and place on a baking sheet. Bake for 10 minutes at 325 °F. Wraps will be lightly brown. Serve hot."
+      ],
+      "nutrients": {
+        "kcal": 175.0,
+        "protein_g": 7.0,
+        "carbs_g": 27.0,
+        "fat_g": 5.0,
+        "fiber_g": 5.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "HarvestStewCACFPhomerecipe",
+      "name": "Harvest Stew",
+      "description": "",
+      "servings": 6,
+      "serving_size": "¾-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "¾ Tbsp Vegetable oil",
+        "¾ cup Fresh onions, peeled, diced",
+        "L cup Fresh carrots, peeled, diced",
+        "½ cup Fresh celery, diced",
+        "1 Tbsp Enriched all-purpose flour",
+        "L tsp Low-sodium chicken base",
+        "1 ¼ cups Water",
+        "V tsp Salt-free seasoning",
+        "L tsp Garlic powder",
+        "1 cup Canned low-sodium diced tomatoes",
+        "1 cup Fresh sweet potatoes, peeled, cubed 1”",
+        "½ cup Fresh red potato, unpeeled, cubed 1”",
+        "1 cup Cooked diced chicken, ½” pieces (3 oz)",
+        "2 cups Canned low-sodium great northern beans, drained, rinsed",
+        "½ cup Fresh baby spinach, chopped"
+      ],
+      "directions": [
+        "Heat vegetable oil in a large pot over medium heat. Cook onions, carrots, and celery for 5 minutes allowing them to brown slightly.",
+        "Sprinkle flour over the vegetables. Stir well. Add chicken base and water. Stir constantly. Bring to a boil.",
+        "Reduce heat to medium. Stir in salt-free seasoning and garlic powder. Cook uncovered for 2 minutes. Add tomatoes, sweet potatoes, and red potatoes. Simmer uncovered for 15 minutes or until potatoes are tender. Stir frequently. Add chicken, beans, and spinach. Stir.",
+        "Continue to simmer uncovered for 10 minutes. Serve hot. ¾ cup provides: Legume as Meat Alternate: 1 ½ oz equivalent meat/meat alternate and W cup vegetable. OR Legume as Vegetable: ½ oz equivalent meat and X cup vegetable. Legume vegetable can be counted as either a meat alternate or as a legume vegetable but not as both simultaneously."
+      ],
+      "nutrients": {
+        "kcal": 124.0,
+        "protein_g": 8.0,
+        "carbs_g": 18.0,
+        "fat_g": 2.0,
+        "fiber_g": 5.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "HarvestdelightCACFPhomerecipe",
+      "name": "Harvest Delight",
+      "description": "",
+      "servings": 6,
+      "serving_size": "½-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "1 L cups Fresh green apples, peeled, cored, diced ½”",
+        "L cup Fresh carrots, peeled, sliced ¼”",
+        "1 cup Fresh sweet potatoes, peeled, cubed 1”",
+        "1 cup Fresh butternut squash, peeled, seeded, cubed ½”",
+        "L cup Fresh red onions, peeled, diced",
+        "2 Tbsp Extra virgin olive oil",
+        "¼ tsp Sea salt",
+        "1 tsp Fresh thyme, chopped",
+        "1 tsp Fresh oregano, chopped",
+        "1 tsp Fresh sage, chopped",
+        "1 tsp Fresh rosemary, chopped",
+        "1 tsp Fresh garlic, minced",
+        "2 ½ tsp Maple syrup",
+        "1 cup Fresh baby spinach, chopped",
+        "V cup Dried cranberries, finely chopped"
+      ],
+      "directions": [
+        "Preheat oven to 425 °F.",
+        "You may place diced apples in a small bowl of water with a squirt of lemon juice to prevent them from browning. Drain when ready to use.",
+        "Steam carrots in a steam basket over high heat for 10 minutes or until soft.",
+        "Toss potatoes, squash, carrots, and red onions in a large mixing bowl with olive oil and salt.",
+        "Line a large baking pan with parchment paper and spray with nonstick cooking spray. Spread vegetables evenly on baking pan. Roast vegetables in oven at 425 °F for 25 minutes or until tender and slightly browned. Turn vegetables once midway through roasting.",
+        "In a large mixing bowl, combine apples, thyme, oregano, sage, rosemary, and garlic.",
+        "Remove vegetables from oven, lower heat to 400 °F. Add apple mixture to vegetables. Spread evenly. Return to the oven and roast for 15 minutes or until slightly tender.",
+        "Remove from oven. Drizzle with maple syrup and mix well. Return to oven. Roast for 8 additional minutes at",
+        "°F until vegetables are fork-tender."
+      ],
+      "nutrients": {
+        "kcal": 93.0,
+        "protein_g": 1.0,
+        "carbs_g": 16.0,
+        "fat_g": 3.0,
+        "fiber_g": 3.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "LentilsoftheSouthwest CACFPhomerecipe",
+      "name": "Lentils of the Southwest",
+      "description": "",
+      "servings": 6,
+      "serving_size": "¼-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "½ cup Lentils, green or brown, dry",
+        "1 tsp Extra virgin olive oil",
+        "2 Tbsp Fresh onions, peeled, diced",
+        "1 tsp Fresh garlic, minced",
+        "1 tsp Ground cumin",
+        "1 tsp Ground red chili pepper",
+        "½ tsp Chili powder",
+        "½ cup Canned low-sodium diced tomatoes",
+        "½ tsp Salt",
+        "2 Tbsp Fresh cilantro, chopped"
+      ],
+      "directions": [
+        "In a small pot, combine the lentils and 1 ¼ cups water. Bring to a boil over high heat. Reduce the heat to low and cook uncovered until tender, about 30 minutes.",
+        "Heat olive oil in a medium skillet. Add onions and garlic. Cook for 3-5 minutes or until tender. Stir in cumin, red chili pepper, and chili powder. Reduce heat to low and cook for 2 minutes.",
+        "Add onion/garlic mixture to cooked lentils. Add ¼ cup plus 2 tablespoons water. Stir in tomatoes and salt. Bring to a boil over high heat. Reduce heat to low and simmer, uncovered, for 20 minutes.",
+        "Just before serving stir in cilantro. Serve hot. ¼ cup provides: Legume as Meat Alternate: 1 oz equivalent meat alternate. OR Legume as Vegetable: ¼ cup vegetable. Legume vegetable can be counted as either a meat alternate or as a legume vegetable but not as both simultaneously."
+      ],
+      "nutrients": {
+        "kcal": 69.0,
+        "protein_g": 5.0,
+        "carbs_g": 11.0,
+        "fat_g": 1.0,
+        "fiber_g": 4.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "MediterraneanQuinoaSaladCACFPhomerecipe",
+      "name": "Mediterranean Quinoa Salad",
+      "description": "",
+      "servings": 6,
+      "serving_size": "¾-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "1 cup Quinoa, dry",
+        "2 cups Low-sodium chicken broth",
+        "2 Tbsp Lemon juice",
+        "2 Tbsp Red wine vinegar",
+        "1 tsp Fresh garlic, minced",
+        "1 ½ Tbsp Extra virgin olive oil",
+        "½ tsp Salt",
+        "V tsp Ground white pepper",
+        "¼ cup Fresh red bell peppers, seeded, diced",
+        "2 Tbsp Fresh green onions, diced",
+        "2 Tbsp Fresh red onions, peeled, diced",
+        "½ cup Fresh cherry tomatoes, halved",
+        "2 Tbsp Black olives, sliced",
+        "2 Tbsp Feta cheese, crumbled",
+        "1 Tbsp Fresh parsley, chopped"
+      ],
+      "directions": [
+        "Rinse quinoa in a fine mesh strainer until water runs clear, not cloudy. Combine quinoa and chicken broth in a small pot. Cover and bring to a boil. Turn heat down to low and simmer until broth is completely absorbed, about 10-15 minutes. When done, quinoa will be soft and a white ring will pop out of the kernel. The white ring will appear only when it is fully cooked. Fluff with a fork. A rice cooker may be used with the same quantity of quinoa and water. Cover and refrigerate.",
+        "In a small mixing bowl, combine lemon juice, vinegar, garlic, olive oil, salt, and ground pepper to make dressing.",
+        "Combine red peppers, green onions, red onions, tomatoes, and olives in a large mixing bowl. Mix well.",
+        "Add dressing to vegetable mixture. Mix in cooled quinoa. Fold in feta cheese and parsley. Cover and refrigerate for about 2 hours. Serve chilled."
+      ],
+      "nutrients": {
+        "kcal": 166.0,
+        "protein_g": 7.0,
+        "carbs_g": 23.0,
+        "fat_g": 6.0,
+        "fiber_g": 3.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "OodlesofNoodlesCACFPhomerecipe",
+      "name": "Oodles of Noodles",
+      "description": "",
+      "servings": 6,
+      "serving_size": "1-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "2¾ cups Penne pasta, whole-wheat, dry (11 oz)",
+        "1 ½ Tbsp Extra virgin olive oil",
+        "2 ¼ cups Fresh grape tomatoes, halved",
+        "1 ½ tsp Dried basil",
+        "¾ tsp Sea salt",
+        "¼ tsp Ground black pepper",
+        "1 Tbsp Fresh garlic, minced",
+        "3 Tbsp Whole-wheat flour",
+        "2 L cups Low-sodium vegetable broth",
+        "4 cups Fresh Swiss chard, stems removed, chopped"
+      ],
+      "directions": [
+        "In a large pot, bring 2 quarts water to a boil. Gradually stir in pasta and return to a boil. Cook uncovered for about 8-10 minutes until tender. Do not overcook. Drain well.",
+        "Heat olive oil in a large skillet over medium heat. Add half of tomatoes and cook 2-3 minutes until skins soften. Do not overcook. Reserve remaining tomatoes for step 4. Add basil, salt, pepper, and garlic. Stir.",
+        "Sprinkle flour over tomatoes. Cook for 30 seconds over medium heat until mixture becomes thick. Add vegetable broth. Bring to a boil and then immediately reduce to low heat.",
+        "Add Swiss chard and remaining tomatoes. Simmer uncovered over low heat for 1-2 minutes or until Swiss chard is wilted. Pour over pasta. Serve hot."
+      ],
+      "nutrients": {
+        "kcal": 235.0,
+        "protein_g": 9.0,
+        "carbs_g": 43.0,
+        "fat_g": 4.0,
+        "fiber_g": 5.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "PeppyQuinoaCACFPhomerecipe",
+      "name": "Peppy Quinoa",
+      "description": "",
+      "servings": 6,
+      "serving_size": "½-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "V cup Pepitas/Pumpkin seeds",
+        "1 ¼ cups Quinoa, dry",
+        "1 Tbsp Low-sodium chicken base",
+        "½ cup Fresh onion, peeled, diced",
+        "½ cup Canned diced green chilies",
+        "2 ¼ tsp Fresh garlic, minced",
+        "½ cup Fresh cilantro, chopped",
+        "½ cup Fresh green onions, diced",
+        "2-4 Tbsp Fresh lime juice (optional)"
+      ],
+      "directions": [
+        "Preheat oven to 350 °F.",
+        "Toast pepitas in oven for 10 minutes or until light brown and aromatic. Set aside.",
+        "Rinse quinoa in a fine mesh strainer until water runs clear, not cloudy. Combine quinoa, 2 ½ cups water, and chicken base in a small pot. Cover and bring to a boil. Turn heat down to low and simmer until water is completely absorbed, about 10-15 minutes. When done, quinoa will be soft and a white ring will pop out of the kernel. The white ring will appear only when it is fully cooked. Fluff with a fork. Set aside. A rice cooker may be used with the same quantity of quinoa, water, and chicken base.",
+        "Mix quinoa, onions, green chilies, and garlic in an 8” x 8” nonstick baking pan sprayed with nonstick cooking spray. Cover pan and bake at 350 °F for 40 minutes.",
+        "Toss in cilantro, green onions, pepitas, and optional lime juice to taste. Serve hot."
+      ],
+      "nutrients": {
+        "kcal": 174.0,
+        "protein_g": 6.0,
+        "carbs_g": 29.0,
+        "fat_g": 4.0,
+        "fiber_g": 3.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "PorcupineSlidersCACFPhomerecipe",
+      "name": "Porcupine Sliders",
+      "description": "",
+      "servings": 6,
+      "serving_size": "sliders",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "V cup Brown rice, long-grain, regular, dry",
+        "1 tsp Canola oil",
+        "1 ½ Tbsp Fresh onion, peeled, diced",
+        "¼ cup Fresh celery, diced",
+        "1 ½ tsp Fresh garlic, minced",
+        "1 lb Raw ground turkey, lean",
+        "1 Egg, beaten",
+        "5 Tbsp Dried cranberries, chopped",
+        "¾ cup Fresh baby spinach, chopped",
+        "1 tsp Worcestershire sauce",
+        "½ tsp Salt",
+        "½ tsp Ground black pepper",
+        "1 dash Ground white pepper",
+        "6 (1 oz each) Mini whole-wheat rolls (small dinner roll size)"
+      ],
+      "directions": [
+        "Preheat oven to 350 °F.",
+        "Combine brown rice and ½ cup water in a small pot and bring to a boil. Turn heat down to low. Cover and cook until water is absorbed, about 30-40 minutes. Fluff with a fork. Cover and refrigerate until completely cooled. A rice cooker may be used with the same quantity of brown rice and water.",
+        "Heat canola oil in a small skillet. Add onions, celery, and garlic. Cook over medium heat for 5 minutes or until tender. Remove from heat. Cover and refrigerate until completely cooled.",
+        "In a medium mixing bowl, combine turkey, egg, cranberries, spinach, Worcestershire sauce, salt, peppers, brown rice, and sautéed vegetables. Mix well. Shape into 6 patties.",
+        "Line a large baking sheet with parchment paper and lightly coat with nonstick cooking spray. Place patties evenly spaced on baking sheet.",
+        "Bake uncovered for 20-25 minutes at 350 °F to an internal temperature of 165 °F or higher for at least 15 seconds (use a food thermometer to check the internal temperature). Do not overcook. Remove from oven and serve on a mini whole-wheat roll. Serve immediately.",
+        "May be served with onion, lettuce, tomatoes, ketchup, and mustard."
+      ],
+      "nutrients": {
+        "kcal": 247.0,
+        "protein_g": 16.0,
+        "carbs_g": 26.0,
+        "fat_g": 9.0,
+        "fiber_g": 3.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "PurplePowerBeanWrapCACFPhomerecipe",
+      "name": "Purple Power Bean Wrap",
+      "description": "",
+      "servings": 6,
+      "serving_size": "wraps vegetable",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "1 tsp Lemon zest (make zest from juiced lemon)",
+        "2 Tbsp Fresh lemon, juiced",
+        "2 cups Canned low-sodium great northern beans, drained, rinsed",
+        "½ cup Fresh avocado, peeled, pitted, puréed",
+        "1 Tbsp Fresh garlic, minced",
+        "2 ¼ tsp Extra virgin olive oil",
+        "L tsp Chili powder",
+        "½ tsp Salt",
+        "1 ½ cups Fresh purple cabbage, finely shredded",
+        "6 Whole-wheat tortillas, 10”",
+        "3 cups Fresh romaine lettuce, shredded"
+      ],
+      "directions": [
+        "Grate lemon rind on hand-held grater or citrus zester to make zest. Juice lemons. Set aside.",
+        "Purée beans in a food processor or a blender until smooth. Put into a large mixing bowl and set aside.",
+        "Purée avocado, lemon juice, lemon zest, garlic, olive oil, chili powder, and salt until smooth. Mix into pureed beans. Add shredded cabbage. Mix well.",
+        "You may cover and refrigerate at 40 °F for no more than 2 hours to avoid browning of avocado. bottom half of tortilla. Top with ½ cup of lettuce. Roll in the form of a burrito. Cut diagonally. Serve immediately. 1 wrap (two halves) provides: Legume as Meat Alternate: ½ oz equivalent meat alternate, X cup vegetable, and 1 ¾ oz equivalent grains. OR Legume as Vegetable: ¾ cup vegetable and 1 ¾ oz equivalent grains. ½ wrap (one half) provides: W cup vegetable and ¾ oz equivalent grains. Legume vegetable can be counted as either a meat alternate or as a legume vegetable but not as both simultaneously."
+      ],
+      "nutrients": {
+        "kcal": 274.0,
+        "protein_g": 8.0,
+        "carbs_g": 38.0,
+        "fat_g": 10.0,
+        "fiber_g": 8.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "RainbowRiceCACFPhomerecipe",
+      "name": "Rainbow Rice",
+      "description": "",
+      "servings": 6,
+      "serving_size": "1-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "½ cup Brown rice, long-grain, regular, dry",
+        "3 Tbsp Brown and wild rice blend, dry",
+        "6 Tbsp Barley, quick pearl, dry",
+        "2 tsp Low-sodium chicken base",
+        "2 Tbsp Quinoa, dry",
+        "3 Tbsp Bulgur wheat, dry",
+        "1 cup Fresh carrots, peeled, diced",
+        "1 cup Fresh red bell peppers, seeded, diced",
+        "1 tsp Extra virgin olive oil",
+        "¼ tsp Kosher salt",
+        "3 ½ cups Cooked diced chicken, ½” pieces (12 oz)",
+        "1 ½ cups Fresh baby spinach, chopped"
+      ],
+      "directions": [
+        "Preheat oven to 350 °F.",
+        "In a medium pot, combine brown rice, wild rice blend, barley, and 1 tsp chicken base with 1 ¼ cups water.",
+        "Rinse quinoa in a fine mesh strainer until water runs clear, not cloudy. In a small pot, combine quinoa and bulgur wheat with ¾ cup water and remaining 1 tsp chicken base.",
+        "Bring both uncovered pots to a rolling boil. Stir occasionally. Turn heat down and simmer over low heat until water is absorbed, about 30 minutes. Cover and cook an additional 10 minutes over low heat. Fluff with a fork.",
+        "In a large mixing bowl, combine carrots and red peppers. Drizzle with olive oil and sprinkle with salt. Toss lightly. Pour into a large nonstick baking pan. Roast at",
+        "°F for 20 minutes or until tender.",
+        "Combine cooked grains, chicken, and spinach with roasted vegetables. Mix well. Return to oven and bake for 15 minutes to an internal temperature of 165 °F or higher for at least 15 seconds (use a food thermometer to check the internal temperature). Serve hot. equivalent grains."
+      ],
+      "nutrients": {
+        "kcal": 232.0,
+        "protein_g": 22.0,
+        "carbs_g": 28.0,
+        "fat_g": 4.0,
+        "fiber_g": 5.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "RoastedFishCrispySlawWrapCACFPhome recipe",
+      "name": "Roasted Fish Crispy Slaw Wrap",
+      "description": "",
+      "servings": 6,
+      "serving_size": "wraps",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "2 ½ cups Fresh red cabbage, shredded",
+        "2 cups Fresh white cabbage, shredded",
+        "1 ½ cups Fresh carrots, peeled, shredded",
+        "1 cup Fresh bok choy, julienne cut “shoestring strips” V”",
+        "2 Tbsp Fresh cilantro, chopped",
+        "¾ cup Low-fat balsamic vinaigrette dressing",
+        "1 Tbsp Salt-free chili-lime seasoning blend",
+        "1 Tbsp Extra virgin olive oil",
+        "6 Tilapia fish filets, raw, 4 oz each",
+        "1 ½ cup Fresh romaine lettuce, julienne cut “shoestring strips”",
+        "6 Whole-wheat tortillas, 8”",
+        "6 slices Fresh avocado, peeled, pitted, sliced quarters Fresh limes, quartered"
+      ],
+      "directions": [
+        "Preheat oven to 375 °F.",
+        "In a large mixing bowl combine red and white cabbages, carrots, bok choy, cilantro, and balsamic dressing to make the slaw. Cover and refrigerate for at least 1 hour.",
+        "Place fish filets on a baking sheet lined with parchment paper sprayed with nonstick cooking spray. Brush fish with olive oil and sprinkle with salt- free seasoning blend. Roast uncovered at 375 °F for 12 minutes or until internal temperature reaches 145 °F or higher and fish flakes with a fork. Use a food thermometer to check the internal temperature.",
+        "Remove fish from oven.",
+        "To assemble wrap: Place ¼ cup lettuce on tortilla. Cut fish in half and place both pieces on top of lettuce. Add 1 cup cabbage slaw and a slice of avocado. Squeeze lime on top of mixture. Roll in the form of a burrito. Cut diagonally. Serve immediately. vegetable, and 1 ½ oz equivalent grains. and ¾ oz equivalent grains."
+      ],
+      "nutrients": {
+        "kcal": 342.0,
+        "protein_g": 29.0,
+        "carbs_g": 37.0,
+        "fat_g": 10.0,
+        "fiber_g": 6.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "SmokinPowerhouseChiliCACFPhomerecipe",
+      "name": "Smokin’ Powerhouse Chili",
+      "description": "",
+      "servings": 6,
+      "serving_size": "1-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "M cup Quinoa, dry",
+        "1 cup Fresh onion, peeled, diced",
+        "2 tsp Fresh garlic, minced",
+        "¾ cup Low-sodium vegetable stock",
+        "1 ¼ cups Fresh carrots, peeled, diced ½”",
+        "½ cup Fresh red bell peppers, seeded, diced",
+        "½ tsp Ground chipotle pepper (optional)",
+        "1 cup Fresh sweet potatoes, peeled, diced ½”",
+        "1 ¾ cups Canned low-sodium diced tomatoes",
+        "1 cup Canned low-sodium tomato sauce",
+        "¼ cup Fresh cilantro, chopped",
+        "2 ½ tsp Chili powder",
+        "2 ½ tsp Ground cumin",
+        "¼ tsp Salt",
+        "2 cups Canned low-sodium black beans, drained, rinsed",
+        "½ cup Frozen corn"
+      ],
+      "directions": [
+        "Rinse quinoa in a fine mesh strainer until water runs clear, not cloudy. Combine quinoa and 1 L cups water in a small pot. Cover and bring to a boil. Turn heat down to low and simmer uncovered until water is completely absorbed, about 10-15 minutes. When done, quinoa will be soft and a white ring will pop out of the kernel. The white ring will appear only when it is fully cooked. Fluff with a fork and set aside. A rice cooker may be used with the same quantity of quinoa and water.",
+        "In a large pot coated with nonstick cooking spray, cook onions and garlic over low-medium heat for 2 minutes. Add half of the vegetable stock and bring to a boil.",
+        "Add carrots, red bell pepper, and optional ground chipotle pepper. Cook uncovered over medium heat for 10 minutes.",
+        "Steam sweet potatoes in a steam basket over high heat. Cover and steam for 15 minutes or until fork-tender.",
+        "Add remaining vegetable stock to pot along with diced tomatoes, tomato sauce, cilantro, chili powder, cumin, and salt. Cook uncovered over medium heat, stirring occasionally, allowing mixture to thicken and flavors to blend for about 15 minutes.",
+        "Add black beans, corn, and steamed sweet potatoes. Cover and continue cooking over low heat for 10-15 minutes."
+      ],
+      "nutrients": {
+        "kcal": 184.0,
+        "protein_g": 7.0,
+        "carbs_g": 38.0,
+        "fat_g": 2.0,
+        "fiber_g": 8.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "SpanishChickpeaStewCACFPhomerecipe",
+      "name": "Spanish Chickpea Stew",
+      "description": "",
+      "servings": 6,
+      "serving_size": "1-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "3 Tbsp Extra virgin olive oil",
+        "2 tsp Fresh garlic, minced",
+        "2 cups Fresh onions, peeled, diced",
+        "2 tsp Sweet paprika",
+        "½ tsp Ground cumin",
+        "3 cups Frozen spinach, chopped",
+        "2 cups Canned low-sodium garbanzo beans (chickpeas), drained, rinsed",
+        "¾ cup Golden raisins",
+        "1 cup Canned low-sodium diced tomatoes",
+        "1 ½ cups Low-sodium chicken stock",
+        "1 Tbsp Red wine vinegar",
+        "¼ tsp Salt",
+        "¼ tsp Ground black pepper"
+      ],
+      "directions": [
+        "In a large pot, heat olive oil over medium heat.",
+        "Add garlic and cook for 1 minute. Add onions and continue to cook for 2-3 minutes until onions are translucent.",
+        "Mix in paprika and cumin.",
+        "Add spinach and cook for 7 minutes.",
+        "Add garbanzo beans (chickpeas), raisins, tomatoes, and chicken stock. Bring to a boil.",
+        "Reduce heat to low and simmer uncovered for 7-10 minutes, or until raisins are plump.",
+        "Add vinegar, salt, and pepper. Mix well. Serve hot. 1 cup provides: Legume as Meat Alternate: 1 ½ oz equivalent meat alternate, W cup vegetable, and ¼ cup fruit. OR Legume as Vegetable: O cup vegetable and ¼ cup fruit. Legume vegetable can be counted as either a meat alternate or as a legume vegetable but not as both simultaneously."
+      ],
+      "nutrients": {
+        "kcal": 241.0,
+        "protein_g": 8.0,
+        "carbs_g": 38.0,
+        "fat_g": 8.0,
+        "fiber_g": 6.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "SquishSquashLasagnaCACFPhomerecipe",
+      "name": "Squish Squash Lasagna",
+      "description": "",
+      "servings": 6,
+      "serving_size": "",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "¼ tsp Canola oil",
+        "¾ cup Fresh onions, peeled, diced",
+        "2 tsp Fresh garlic, minced",
+        "1 ½ cups Canned low-sodium diced tomatoes",
+        "¼ tsp Dried oregano",
+        "¼ tsp Dried thyme",
+        "¼ tsp Dried basil",
+        "8 Whole-wheat lasagna sheets, no-boil, 3 ½” x 7” sheets",
+        "1 ¼ cups Fresh spinach, julienne cut “shoestring strips” V”",
+        "22 slices Fresh butternut squash, peeled, seeded, sliced",
+        "¾ cup Low-fat mozzarella cheese, low moisture, part skim, shredded"
+      ],
+      "directions": [
+        "Preheat oven to 350 °F.",
+        "Heat canola oil in a medium pot over medium-high heat. Add onions, and garlic. Cook for 2-3 minutes or until tender. Add tomatoes, oregano, thyme, and basil. Reduce heat to low and simmer, uncovered, for 30 minutes, stirring occasionally. Add ½ cup water. Mix well.",
+        "Divide sauce into 3 equal parts (about ¾ cup each) and set aside for step 6.",
+        "Place pasta sheets in a bowl filled with hot water for 5 minutes. Remove sheets as needed to assemble lasagna.",
+        "Spray bottom and sides of an 8” x 8” nonstick baking pan with nonstick cooking spray.",
+        "To Assemble: a. Place 4 lasagna sheets overlapping, covering the bottom of the pan b. Cover evenly with about ¾ cup tomato sauce c. Spread half of the spinach (about ¾ cup) evenly over sauce d. Place 11 slices of squash on top of spinach, slightly overlapping e. Repeat layering steps a-d f. Cover with remaining sauce (about ¾ cup) Cover tightly with aluminum foil and bake at 350 °F for 50 minutes or until squash is fork-tender."
+      ],
+      "nutrients": {
+        "kcal": 175.0,
+        "protein_g": 8.0,
+        "carbs_g": 29.0,
+        "fat_g": 4.0,
+        "fiber_g": 5.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "Stir-FryFajitaChickenSquashandCornCACFPhomerecipe",
+      "name": "Stir-Fry Fajita Chicken, Squash, and Corn",
+      "description": "",
+      "servings": 6,
+      "serving_size": "¾-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "1 ¾ cups Brown rice, long-grain, regular, dry",
+        "1 ½ tsp Salt-free chili-lime seasoning blend",
+        "¼ tsp Granulated garlic",
+        "1 Tbsp Fresh cilantro, chopped",
+        "2 Tbsp Canola oil",
+        "1 cup Fresh onions, peeled, diced",
+        "4 cups Cooked fajita chicken strips (16 oz)",
+        "3 ½ cups Fresh butternut squash, peeled, seeded, diced ½”",
+        "½ cup Fresh red bell peppers, seeded, diced",
+        "1 cup Frozen corn, thawed",
+        "½ cup Canned diced green chilies",
+        "½ cup Canned low-sodium diced tomatoes",
+        "½ tsp Ground black pepper",
+        "¾ tsp Ground cumin",
+        "¼ tsp Garlic powder"
+      ],
+      "directions": [
+        "Combine brown rice and 4 ½ cups water in a large pot and bring to a rolling boil. Turn heat down to low. Cover and cook until water is absorbed, about 30-40 minutes. Sprinkle with ½ tsp salt-free seasoning blend, granulated garlic, and cilantro. Mix well. Keep warm. A rice cooker may be used with the same quantity of brown rice and water.",
+        "Heat canola oil in a large skillet or a wok. Cook onions for 2 minutes or until translucent.",
+        "Add chicken, squash, and remaining salt-free seasoning blend. Stir-fry over high heat for 10 minutes or until squash is tender.",
+        "Add red peppers, corn, green chilies, tomatoes, pepper, cumin, and garlic powder. Stir-fry over medium-high heat for no longer than 2 minutes so vegetables will remain crunchy. Do not overcook. Reduce heat to low and let simmer 2 minutes. Serve hot. ¾ cup vegetable, and 1 oz equivalent grains."
+      ],
+      "nutrients": {
+        "kcal": 396.0,
+        "protein_g": 20.0,
+        "carbs_g": 59.0,
+        "fat_g": 10.0,
+        "fiber_g": 7.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "Stir-FryGreenRiceEggsandHamCACFPhomerecipe",
+      "name": "Stir-Fried Green Rice, Eggs, and Ham (Turkey Ham)",
+      "description": "",
+      "servings": 6,
+      "serving_size": "1-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "1 ¾ cups Brown rice, long-grain, regular, dry",
+        "L tsp Salt",
+        "¾ cup Frozen chopped spinach, thawed, drained eggs, beaten",
+        "1 Tbsp Vegetable oil",
+        "½ cup Extra-lean turkey ham, diced ¼” (2 oz)",
+        "¼ cup Fresh green onions, diced",
+        "1 tsp Sesame oil",
+        "1 tsp Low-sodium soy sauce"
+      ],
+      "directions": [
+        "Combine brown rice and 4 ½ cups water in a large pot and bring to a boil. Turn heat down to low. Cover and cook until water is absorbed, about 30-40 minutes. Fluff with a fork. Add salt to rice. Mix well. Set aside. A rice cooker may be used with the same quantity of brown rice and water.",
+        "Drain water from spinach by squeezing thawed spinach with hands. Set aside.",
+        "Whisk together eggs and 1 Tbsp water.",
+        "Cook half of the eggs in a large nonstick skillet coated with nonstick cooking spray. Remove eggs from skillet to cool. Chop cooled eggs and set aside. Reserve the remaining eggs for step 6.",
+        "Heat vegetable oil in a wok or a large nonstick skillet over high heat. Add ham and cook for 2 minutes or until ham begins to brown.",
+        "Reduce heat to medium. Add brown rice and toss to mix. Add remaining eggs. Stir for 5 minutes or until egg is fully cooked.",
+        "Add green onions, spinach, chopped egg, sesame oil, and soy sauce. Stir well. Cook until thoroughly heated. Serve hot. equivalent grains."
+      ],
+      "nutrients": {
+        "kcal": 238.0,
+        "protein_g": 9.0,
+        "carbs_g": 35.0,
+        "fat_g": 7.0,
+        "fiber_g": 3.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "SweetPotatoandBlackBeanStewCACFPhomerecipe",
+      "name": "Sweet Potato and Black Bean Stew",
+      "description": "",
+      "servings": 6,
+      "serving_size": "1-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "2 Tbsp Vegetable oil small pepper Dried New Mexican chili pepper",
+        "1 ¼ cups Fresh onions, peeled, diced",
+        "1 tsp Ground cumin",
+        "1 ½ cups Fresh sweet potatoes, peeled, cubed ½”",
+        "6 cups Canned low-sodium black beans, drained, rinsed",
+        "¾ cup Orange juice",
+        "1 cup Low-sodium chicken stock",
+        "1 Tbsp Red wine vinegar",
+        "¼ tsp Salt",
+        "¼ tsp Ground black pepper",
+        "4 cups Fresh Swiss chard, no stems, chopped"
+      ],
+      "directions": [
+        "Heat vegetable oil in a large pot. Cook chili pepper and onions for 1-2 minutes.",
+        "Add cumin and cook for 2 minutes..",
+        "Add sweet potatoes, black beans, orange juice, and chicken stock. Bring to a boil. Cover and reduce heat to low. Simmer for 20 minutes or until the potatoes are tender.",
+        "Remove chili pepper and discard.",
+        "Add vinegar, salt, and pepper.",
+        "Add Swiss chard. Cover and continue cooking until Swiss chard is tender. Serve hot. May serve over brown rice or whole-wheat couscous. 1 cup provides: Legume as Meat Alternate: 3 oz equivalent meat alternate and ½ cup vegetable. OR Legume as Vegetable: 1 ¼ cup vegetable. Legume vegetable can be counted as either a meat alternate or as a legume vegetable but not as both simultaneously."
+      ],
+      "nutrients": {
+        "kcal": 222.0,
+        "protein_g": 10.0,
+        "carbs_g": 43.0,
+        "fat_g": 4.0,
+        "fiber_g": 12.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "TastyTotsCACFPhomerecipe",
+      "name": "Tasty Tots",
+      "description": "",
+      "servings": 36,
+      "serving_size": "6 tots",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "5 cups Fresh sweet potatoes, peeled, coarsely shredded",
+        "2 L cups Canned low-sodium garbanzo beans (chickpeas), with liquid",
+        "½ cup Fresh green onions, finely chopped",
+        "2 Tbsp Vegetable oil",
+        "½ tsp Salt",
+        "½ tsp Granulated garlic",
+        "¼ tsp Ground black pepper",
+        "½ tsp Onion powder",
+        "½ tsp Ground cinnamon"
+      ],
+      "directions": [
+        "Preheat oven to 350 °F.",
+        "Place shredded potatoes on a large baking pan sprayed with a nonstick cooking spray. Bake at 350 °F for 20 minutes or until slightly tender. Do not overcook.",
+        "Increase oven temperature to 400 °F.",
+        "In a food processor or blender, purée garbanzo beans, including the liquid, until smooth.",
+        "In a medium mixing bowl, combine shredded sweet potatoes, puréed garbanzo beans, green onions, vegetable oil, salt, garlic, pepper, onion powder, and cinnamon. Mix well. Cover and refrigerate for 40-45 minutes to make tots easier to form.",
+        "Spray a large baking sheet with nonstick cooking spray. Using a cookie scoop or a spoon, roll 36 tots. Place 1 inch apart on baking sheet. Lightly flatten the tops of the tots with a spoon or a fork. Bake at 400 °F for 10-12 minutes or until lightly brown. Serve hot. 6 tots provide O cup vegetable.* the meat/meat alternate component since the beans are not visibly with legumes is limited to the vegetable component because of its"
+      ],
+      "nutrients": {
+        "kcal": 172.0,
+        "protein_g": 4.0,
+        "carbs_g": 28.0,
+        "fat_g": 5.0,
+        "fiber_g": 5.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "TuscanSmokedTurkeyandBeanSoupforHomes",
+      "name": "Tuscan Smoked Turkey and Bean Soup",
+      "description": "",
+      "servings": 6,
+      "serving_size": "1-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "L cup Fresh onions, peeled, diced ½”",
+        "L cup Fresh celery, diced",
+        "L cup Fresh carrots, peeled, diced",
+        "1 ½ cups Fresh kale, no stems, chopped",
+        "2 ¼ tsp Canned low-sodium tomato paste",
+        "1 Tbsp Fresh garlic, minced",
+        "4 ¼ cups Low-sodium chicken stock",
+        "1 ¾ cups Canned low-sodium Navy beans, drained, rinsed",
+        "½ tsp Salt",
+        "V tsp Ground black pepper",
+        "1 cup Smoked turkey breast, ¼” pieces (5 oz)",
+        "2 tsp Fresh thyme, chopped",
+        "2 tsp Fresh basil, chopped",
+        "2 tsp Fresh parsley, chopped"
+      ],
+      "directions": [
+        "Place onions, celery, carrots, kale, tomato paste, and garlic in a large pot coated with nonstick cooking spray. Cook over medium-high heat. Stir frequently. Cook until vegetables are softened and onions are translucent.",
+        "Add chicken stock, beans, salt, and pepper.",
+        "Reduce temperature to low heat. Cover and simmer for 20 minutes. Stir occasionally.",
+        "Add turkey, thyme, basil, and parsley. Stir well. Simmer a minimum of 10 minutes. Serve hot. 1 cup provides: Legume as Meat Alternate: 1 ½ oz equivalent meat/meat alternate and ¼ cup vegetable. OR Legume as Vegetable: ½ oz equivalent meat and ½ cup vegetable. Legume vegetable can be counted as either a meat alternate or as a legume vegetable but not as both simultaneously."
+      ],
+      "nutrients": {
+        "kcal": 135.0,
+        "protein_g": 15.0,
+        "carbs_g": 14.0,
+        "fat_g": 3.0,
+        "fiber_g": 4.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    },
+    {
+      "source_id": "VegetableChiliBoatCACFPhomerecipe",
+      "name": "Vegetable Chili Boat",
+      "description": "",
+      "servings": 6,
+      "serving_size": "¾-cup",
+      "prep_mins": null,
+      "cook_mins": null,
+      "ingredients": [
+        "2 ½ tsp Canola oil",
+        "½ cup Fresh onion, peeled, diced",
+        "½ cup Fresh green bell pepper, seeded, diced",
+        "½ cup Canned low-sodium pinto beans, drained, rinsed",
+        "½ cup Canned low-sodium kidney beans, drained, rinsed",
+        "1 cup Canned low-sodium black beans, drained, rinsed",
+        "1 ½ Tbsp Chili powder",
+        "1 L cups Canned low-sodium diced tomatoes",
+        "1 cup Low-sodium chicken stock",
+        "1 dash Hot sauce",
+        "¼ cup Canned low-sodium tomato paste chips Low-sodium tortilla chips",
+        "¼ cup Reduced-fat cheddar cheese, shredded (1 oz)",
+        "¼ cup Low-fat mozzarella cheese, low moisture, part skim, shredded"
+      ],
+      "directions": [
+        "Heat canola oil in a large pot over medium-high heat. Add onions and green peppers. Cook for 2-3 minutes or until tender. Add beans and stir to coat. Add chili powder. Stir. Cook for 1 minute for flavors to blend.",
+        "Add tomatoes, chicken stock, and hot sauce. Bring to a boil. Simmer uncovered for 10 minutes. Add tomato paste and mix well. Cook uncovered for an additional 10 minutes. Bring to a rolling boil for at least 15 seconds. Reduce heat to low and simmer to keep warm.",
+        "Combine cheddar and mozzarella cheeses (the cheese is a garnish).",
+        "Place ¾ cup chili in a bowl. Top with 3 chips and sprinkle with about 1 tablespoon of cheese blend. Serve hot. ¾ cup provides: Legume as Meat Alternate: ¾ oz equivalent meat alternate, W cup vegetable, and ¼ oz equivalent grains. OR Legume as Vegetable: ¼ oz equivalent meat alternate, ½ cup vegetable, and ¼ oz equivalent grains. Legume vegetable can be counted as either a meat alternate or as a legume vegetable but not as both simultaneously."
+      ],
+      "nutrients": {
+        "kcal": 141.0,
+        "protein_g": 7.0,
+        "carbs_g": 21.0,
+        "fat_g": 4.0,
+        "fiber_g": 5.0
+      },
+      "source_url": "https://www.fna.usda.gov/tn/recipes-healthy-kids-cookbook-homes"
+    }
+  ]
+}

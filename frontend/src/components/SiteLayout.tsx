@@ -1,49 +1,35 @@
 import type { ReactNode } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
-
-function PotMark({ className = '' }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      className={className}
-      viewBox="0 0 32 32"
-      fill="none"
-    >
-      <path
-        d="M9.5 12.5h13v8.2a4.3 4.3 0 0 1-4.3 4.3h-4.4a4.3 4.3 0 0 1-4.3-4.3v-8.2Z"
-        fill="currentColor"
-      />
-      <rect x="6.5" y="10.4" width="19" height="2.2" rx="1.1" fill="currentColor" />
-      <rect x="13.6" y="6.5" width="4.8" height="2.2" rx="1.1" fill="currentColor" />
-      <path d="M4.5 15.5h3M24.5 15.5h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  )
-}
+import { ButtonLink } from './Button'
 
 const navItems = [
+  { to: '/finder', label: 'Finder' },
   { to: '/recipes', label: 'Recipes' },
   { to: '/ingredients', label: 'Ingredients' },
 ]
 
 function SiteHeader() {
   return (
-    <header className="bg-surface">
-      <div className="mx-auto flex max-w-[1320px] items-center justify-between gap-6 px-5 py-5 md:px-8">
-        <Link to="/" className="flex items-center gap-3">
-          <PotMark className="h-7 w-7 text-accent" />
-          <span className="font-display text-xl tracking-tight">
-            Cooker <span className="text-muted">Archive</span>
-          </span>
+    <header className="bg-heat">
+      <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-x-8 gap-y-3 px-5 py-5 md:px-10">
+        <Link
+          to="/"
+          className="font-display text-3xl leading-none tracking-tight sm:text-4xl"
+        >
+          Cooker
         </Link>
-        <nav aria-label="Main" className="flex items-center gap-5 text-sm sm:gap-7">
+        <nav
+          aria-label="Main"
+          className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm font-semibold sm:gap-x-7"
+        >
           {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `transition-colors hover:text-accent ${
-                  isActive ? 'text-accent' : 'text-ink/75'
-                }`
+                isActive
+                  ? 'underline decoration-2 underline-offset-4'
+                  : 'hover:underline hover:decoration-2 hover:underline-offset-4'
               }
             >
               {item.label}
@@ -53,7 +39,7 @@ function SiteHeader() {
             href="/api/docs"
             target="_blank"
             rel="noreferrer"
-            className="text-ink/75 transition-colors hover:text-accent"
+            className="hover:underline hover:decoration-2 hover:underline-offset-4"
           >
             API
           </a>
@@ -65,53 +51,61 @@ function SiteHeader() {
 
 function SiteFooter() {
   return (
-    <footer className="mx-auto mt-24 max-w-[1320px] px-5 pb-12 md:px-8">
-      <div className="bg-ink px-6 py-10 text-paper md:px-10 md:py-12">
-        <div className="grid gap-10 md:grid-cols-[1.6fr_1fr]">
-          <div>
-            <p className="font-display text-4xl leading-none tracking-tight md:text-5xl">
-              Cooker Archive
+    <footer className="on-ink bg-ink text-field">
+      <div className="mx-auto max-w-[1440px] px-5 pt-20 md:px-10 md:pt-28">
+        <div className="grid gap-14 lg:grid-cols-12 lg:gap-8">
+          <div className="lg:col-span-8">
+            <h2 className="font-display text-[clamp(3.25rem,8vw,7rem)] leading-[0.86] text-heat">
+              Still hungry?
+            </h2>
+            <p className="mt-6 max-w-md text-lead leading-snug text-field/80">
+              Tell Cooker what is in your kitchen and cook the closest
+              match.
             </p>
-            <p className="mt-4 max-w-md text-base leading-relaxed text-paper/70">
-              A read-only archive of historical American cookery. Recipes keep their source,
-              year and attribution so the original can always be checked.
-            </p>
+            <ButtonLink to="/finder" tone="heat" className="mt-8">
+              Open the finder
+            </ButtonLink>
           </div>
-          <div className="grid grid-cols-1 gap-6 text-sm sm:grid-cols-2 md:grid-cols-1">
+
+          <div className="grid grid-cols-2 gap-8 text-sm lg:col-span-4">
             <div>
-              <p className="text-paper/50">Sources</p>
-              <ul className="mt-2 space-y-1">
+              <p className="font-semibold text-heat">Browse</p>
+              <ul className="mt-3 space-y-2 text-field/80">
                 <li>
-                  <a
-                    href="https://www.gutenberg.org/"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="underline decoration-paper/30 underline-offset-4 hover:decoration-paper"
+                  <Link
+                    to="/recipes"
+                    className="hover:underline hover:decoration-2 hover:underline-offset-4"
                   >
-                    Project Gutenberg
-                  </a>
+                    All recipes
+                  </Link>
                 </li>
                 <li>
-                  <a
-                    href="https://github.com/"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="underline decoration-paper/30 underline-offset-4 hover:decoration-paper"
+                  <Link
+                    to="/ingredients"
+                    className="hover:underline hover:decoration-2 hover:underline-offset-4"
                   >
-                    OpenRecipeArchive
-                  </a>
+                    The pantry
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/finder"
+                    className="hover:underline hover:decoration-2 hover:underline-offset-4"
+                  >
+                    Finder
+                  </Link>
                 </li>
               </ul>
             </div>
-            <div>
-              <p className="text-paper/50">Developers</p>
-              <ul className="mt-2 space-y-1">
+            <div className="lg:text-right">
+              <p className="font-semibold text-heat">Elsewhere</p>
+              <ul className="mt-3 space-y-2 text-field/80">
                 <li>
                   <a
                     href="/api/docs"
                     target="_blank"
                     rel="noreferrer"
-                    className="underline decoration-paper/30 underline-offset-4 hover:decoration-paper"
+                    className="hover:underline hover:decoration-2 hover:underline-offset-4"
                   >
                     API reference
                   </a>
@@ -121,7 +115,7 @@ function SiteFooter() {
                     href="/api/openapi.json"
                     target="_blank"
                     rel="noreferrer"
-                    className="underline decoration-paper/30 underline-offset-4 hover:decoration-paper"
+                    className="hover:underline hover:decoration-2 hover:underline-offset-4"
                   >
                     OpenAPI schema
                   </a>
@@ -130,12 +124,22 @@ function SiteFooter() {
             </div>
           </div>
         </div>
-        <p className="mt-10 max-w-[64ch] text-sm leading-relaxed text-paper/50">
-          Images: “Cooking in Camp” (1861), American Cookery (1915) via Internet Archive Book
-          Images, and Daniel Shoemaker farmhouse kitchen (HABS), all public domain; “Brown Betty”
-          by KaMan, CC BY-SA 4.0; apple bread pudding by stu_spivack, CC BY-SA 2.0. All via
-          Wikimedia Commons.
-        </p>
+
+        <div className="mt-20 flex flex-wrap items-end justify-between gap-4 text-sm text-field/60">
+          <p>Cook from what you have. No accounts, no tracking.</p>
+          <a
+            href="#main"
+            className="hover:underline hover:decoration-2 hover:underline-offset-4"
+          >
+            Back to top
+          </a>
+        </div>
+
+        <div className="mt-6 overflow-hidden" aria-hidden="true">
+          <p className="translate-y-[16%] whitespace-nowrap text-center font-display text-[30vw] leading-[0.74] tracking-[-0.02em] text-heat md:text-[26vw]">
+            Cooker
+          </p>
+        </div>
       </div>
     </footer>
   )
@@ -144,8 +148,16 @@ function SiteFooter() {
 export default function SiteLayout({ children }: { children?: ReactNode }) {
   return (
     <div className="flex min-h-svh flex-col">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:bg-ink focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-heat"
+      >
+        Skip to content
+      </a>
       <SiteHeader />
-      <main className="flex-1">{children ?? <Outlet />}</main>
+      <main id="main" className="flex-1">
+        {children ?? <Outlet />}
+      </main>
       <SiteFooter />
     </div>
   )

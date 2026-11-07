@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/recipes/finder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Find By Ingredients */
+        get: operations["recipes_routers_recipes_find_by_ingredients"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/recipes/slug/{slug}": {
         parameters: {
             query?: never;
@@ -98,6 +115,30 @@ export interface paths {
         };
         /** List Ingredients */
         get: operations["recipes_routers_ingredients_list_ingredients"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ingredients/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Suggest Ingredients
+         * @description Autocomplete limited to ingredients some recipe actually uses.
+         *
+         *     The USDA import adds thousands of foods nobody can cook with on their own
+         *     (babyfood, restaurant items); sending those to the pantry input would make
+         *     the suggestion list useless.
+         */
+        get: operations["recipes_routers_ingredients_suggest_ingredients"];
         put?: never;
         post?: never;
         delete?: never;
@@ -155,6 +196,31 @@ export interface components {
             /** Page Size */
             page_size?: number | null;
         };
+        /** NutritionOut */
+        NutritionOut: {
+            /** Kcal */
+            kcal: number;
+            /** Protein G */
+            protein_g: number;
+            /** Carbs G */
+            carbs_g: number;
+            /** Fat G */
+            fat_g: number;
+            /** Fiber G */
+            fiber_g: number;
+            /** Method */
+            method: string;
+            /**
+             * Lines Used
+             * @default 0
+             */
+            lines_used: number;
+            /**
+             * Lines Total
+             * @default 0
+             */
+            lines_total: number;
+        };
         /** PagedRecipeListOut */
         PagedRecipeListOut: {
             /** Items */
@@ -198,6 +264,32 @@ export interface components {
             collection: string;
             /** License */
             license: string;
+            nutrition?: components["schemas"]["NutritionOut"] | null;
+        };
+        /** FinderOut */
+        FinderOut: {
+            /** Count */
+            count: number;
+            /** Ingredients */
+            ingredients: string[];
+            /** Unmatched */
+            unmatched: string[];
+            /** Items */
+            items: components["schemas"]["FinderRecipeOut"][];
+        };
+        /** FinderRecipeOut */
+        FinderRecipeOut: {
+            recipe: components["schemas"]["RecipeListOut"];
+            /** Matched */
+            matched: string[];
+            /** Missing */
+            missing: string[];
+            /** Matched Lines */
+            matched_lines: number;
+            /** Total Lines */
+            total_lines: number;
+            /** Pantry Coverage */
+            pantry_coverage: number;
         };
         /** IngredientOut */
         IngredientOut: {
@@ -207,21 +299,6 @@ export interface components {
             name: string;
             /** Category */
             category: string;
-        };
-        /** NutritionOut */
-        NutritionOut: {
-            /** Kcal */
-            kcal: number;
-            /** Protein G */
-            protein_g: number;
-            /** Carbs G */
-            carbs_g: number;
-            /** Fat G */
-            fat_g: number;
-            /** Fiber G */
-            fiber_g: number;
-            /** Method */
-            method: string;
         };
         /** RecipeDetailOut */
         RecipeDetailOut: {
@@ -259,13 +336,13 @@ export interface components {
             collection: string;
             /** License */
             license: string;
+            nutrition?: components["schemas"]["NutritionOut"] | null;
             /** Directions */
             directions: string;
             /** Attribution */
             attribution: string;
             /** Ingredients */
             ingredients: components["schemas"]["RecipeIngredientOut"][];
-            nutrition?: components["schemas"]["NutritionOut"] | null;
         };
         /** RecipeIngredientOut */
         RecipeIngredientOut: {
@@ -413,6 +490,30 @@ export interface operations {
             };
         };
     };
+    recipes_routers_recipes_find_by_ingredients: {
+        parameters: {
+            query: {
+                ingredients: string;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinderOut"];
+                };
+            };
+        };
+    };
     recipes_routers_recipes_get_recipe_by_slug: {
         parameters: {
             query?: never;
@@ -478,6 +579,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PagedIngredientOut"];
+                };
+            };
+        };
+    };
+    recipes_routers_ingredients_suggest_ingredients: {
+        parameters: {
+            query?: {
+                q?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngredientOut"][];
                 };
             };
         };
