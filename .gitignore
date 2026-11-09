@@ -16,6 +16,10 @@ local_settings.py
 # Sample data
 sample_data/
 
+# Local agent skills (installed per developer, not project source)
+/.agents/
+/skills-lock.json
+
 # Node
 .taste-skill/
 node_modules/
