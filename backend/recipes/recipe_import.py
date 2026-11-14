@@ -158,7 +158,9 @@ def save_recipe(data, slug=None, dry_run=False, metadata=None):
     title = " ".join(str(data.get("title") or "").split()) or "Untitled recipe"
     recipe_slug = slugify(slug) if slug else slug_for(title)
     recipe_slug = recipe_slug or "recipe"
-    servings = data.get("servings") or 1
+    # Keep an unknown yield unknown. Coercing it to 1 would label a whole
+    # dish's calories as a single serving.
+    servings = data.get("servings")
     serving_size = " ".join(str(data.get("serving_size") or "").split())
     directions = directions_text(data.get("directions"))
     lines = list(_ingredient_lines(data))
@@ -209,12 +211,16 @@ def save_recipe(data, slug=None, dry_run=False, metadata=None):
             )
             pairs.append((ingredient, quantity))
 
-        computed = compute(pairs, servings)
+        computed = compute(pairs, servings or 1)
         if source_nutrition is not None:
             Nutrition.objects.update_or_create(
                 recipe=recipe, defaults=source_nutrition
             )
-        elif computed.lines_used:
+        elif computed.lines_used and servings and computed.totals["kcal"] > 0:
+            # A partial sum can only undercount the dish, so it is stored and
+            # presented as a lower bound rather than as the final figure. A
+            # sum of zero means only salt, water or spices converted; that is
+            # not an estimate of the dish, so no panel is published.
             Nutrition.objects.update_or_create(
                 recipe=recipe,
                 defaults={

@@ -1,7 +1,7 @@
 import json
 import zipfile
 from collections import namedtuple
-from datetime import date
+from datetime import date, datetime, timezone as dt_timezone
 from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -28,6 +28,7 @@ from .management.commands.usda_bulk import (
     parse_bulk_food,
     parse_portions,
 )
+from .ingredient_cleanup import canonical_ingredient_name, is_equipment
 from .matching import IngredientIndex
 from .models import (
     Ingredient,
@@ -37,7 +38,15 @@ from .models import (
     Recipe,
     RecipeIngredient,
 )
-from .nutrition import compute, scale_nutrients
+from .nutrition import compute, coverage, is_reliable, scale_nutrients
+from .nutrition_sources import (
+    COFID,
+    OPEN_FOOD_FACTS,
+    USDA,
+    is_commercially_clear,
+    license_fields,
+    source_metadata,
+)
 from .openrecipearchive import (
     ENGLISH_COLLECTIONS,
     SOURCE,
@@ -47,6 +56,7 @@ from .openrecipearchive import (
     parse_servings,
 )
 from .pdf import extract_recipe, split_quantity
+from .public_domain_recipes import parse_ingredient_line, parse_recipe
 from .units import grams_for, normalize_measure, parse_amount
 
 Measure = namedtuple("Measure", ("measure", "amount", "gram_weight"))
@@ -173,6 +183,40 @@ class IngredientNutritionTests(NutritionFactoryMixin, TestCase):
         with self.assertRaises(IntegrityError), transaction.atomic():
             self.create_nutrition(serving_size_g=0)
 
+
+class NutritionSourceTests(TestCase):
+    def test_usda_is_clear_for_commercial_use(self):
+        self.assertTrue(USDA.commercial_use)
+        self.assertFalse(USDA.share_alike)
+        self.assertTrue(is_commercially_clear(USDA.name))
+        self.assertEqual(USDA.license, "CC0 1.0")
+
+    def test_cofid_allows_commercial_use_with_attribution(self):
+        self.assertTrue(COFID.commercial_use)
+        self.assertFalse(COFID.share_alike)
+        self.assertTrue(is_commercially_clear(COFID.name))
+        self.assertIn("Open Government Licence", COFID.license)
+        self.assertIn("Crown copyright", COFID.attribution)
+
+    def test_open_food_facts_is_not_merged_into_the_proprietary_database(self):
+        self.assertTrue(OPEN_FOOD_FACTS.commercial_use)
+        self.assertTrue(OPEN_FOOD_FACTS.share_alike)
+        self.assertFalse(is_commercially_clear(OPEN_FOOD_FACTS.name))
+
+    def test_unknown_source_is_treated_as_restricted(self):
+        source = source_metadata("Some Blog")
+
+        self.assertFalse(source.commercial_use)
+        self.assertTrue(source.share_alike)
+        self.assertFalse(is_commercially_clear("Some Blog"))
+
+    def test_licence_fields_travel_with_each_row(self):
+        fields = license_fields(USDA)
+
+        self.assertEqual(fields["license"], "CC0 1.0")
+        self.assertIn("FoodData Central", fields["attribution"])
+
+
 @override_settings(USDA_API_KEY="test-api-key")
 class USDAImportTests(TestCase):
     def food_payload(self, fdc_id=123, kcal=389):
@@ -201,6 +245,18 @@ class USDAImportTests(TestCase):
                     "nutrient": {"id": 1079, "unitName": "g"},
                     "amount": 10.6,
                 },
+                {
+                    "nutrient": {"id": 1258, "unitName": "g"},
+                    "amount": 1.2,
+                },
+                {
+                    "nutrient": {"id": 2000, "unitName": "g"},
+                    "amount": 1.0,
+                },
+                {
+                    "nutrient": {"id": 1093, "unitName": "mg"},
+                    "amount": 5.0,
+                },
             ],
         }
 
@@ -218,8 +274,35 @@ class USDAImportTests(TestCase):
         self.assertEqual(nutrition.source_id, "123")
         self.assertEqual(nutrition.serving_size_g, 100)
         self.assertEqual(nutrition.kcal, 389)
+        self.assertEqual(nutrition.saturated_fat_g, 1.2)
+        self.assertEqual(nutrition.sugar_g, 1.0)
+        self.assertEqual(nutrition.sodium_mg, 5.0)
+        self.assertEqual(nutrition.license, "CC0 1.0")
+        self.assertIn("FoodData Central", nutrition.attribution)
+        self.assertIsNotNone(nutrition.retrieved_at)
+        self.assertEqual(nutrition.verification_status, "unverified")
+        self.assertEqual(ingredient.processing_status, "matched")
+        self.assertIsNotNone(ingredient.processed_at)
         self.assertIn("created=1", output.getvalue())
         get_food.assert_called_once_with(123)
+
+    @patch("recipes.management.commands.import_usda.USDAClient.get_food")
+    def test_missing_extended_nutrients_stay_null(self, get_food):
+        payload = self.food_payload()
+        payload["foodNutrients"] = [
+            entry
+            for entry in payload["foodNutrients"]
+            if entry["nutrient"]["id"] not in (1258, 2000, 1093)
+        ]
+        get_food.return_value = payload
+
+        call_command("import_usda", "--fdc-id", "123", stdout=StringIO())
+
+        nutrition = IngredientNutrition.objects.get()
+        self.assertIsNone(nutrition.saturated_fat_g)
+        self.assertIsNone(nutrition.sugar_g)
+        self.assertIsNone(nutrition.sodium_mg)
+        self.assertEqual(nutrition.kcal, 389)
 
     @patch("recipes.management.commands.import_usda.USDAClient.get_food")
     def test_dry_run_does_not_write(self, get_food):
@@ -287,6 +370,11 @@ class USDAImportTests(TestCase):
         measure = IngredientMeasure.objects.get()
         self.assertEqual(measure.measure, "cup")
         self.assertEqual(measure.gram_weight, 90.0)
+        self.assertEqual(measure.measurement_system, "us")
+        self.assertEqual(
+            measure.conversion_source, "USDA FoodData Central foodPortions"
+        )
+        self.assertEqual(measure.confidence, 0.9)
 
 
 @override_settings(USDA_API_KEY="test-api-key")
@@ -302,6 +390,9 @@ class USDAJSONTests(TestCase):
                 {"nutrient": {"id": 1005, "unitName": "g"}, "amount": 66.3},
                 {"nutrient": {"id": 1004, "unitName": "g"}, "amount": 6.9},
                 {"nutrient": {"id": 1079, "unitName": "g"}, "amount": 10.6},
+                {"nutrient": {"id": 1258, "unitName": "g"}, "amount": 1.2},
+                {"nutrient": {"id": 2000, "unitName": "g"}, "amount": 1.0},
+                {"nutrient": {"id": 1093, "unitName": "mg"}, "amount": 5.0},
             ],
         }
 
@@ -323,6 +414,9 @@ class USDAJSONTests(TestCase):
                         "carbs_g": 66.3,
                         "fat_g": 6.9,
                         "fiber_g": 10.6,
+                        "saturated_fat_g": 1.2,
+                        "sugar_g": 1.0,
+                        "sodium_mg": 5.0,
                     },
                 }
             ],
@@ -354,6 +448,7 @@ class USDAJSONTests(TestCase):
         self.assertEqual(snapshot["basis"], {"amount": 100, "unit": "g"})
         self.assertEqual(snapshot["foods"][0]["fdc_id"], 123)
         self.assertEqual(snapshot["foods"][0]["nutrients"]["kcal"], 389)
+        self.assertEqual(snapshot["foods"][0]["nutrients"]["saturated_fat_g"], 1.2)
         self.assertIn("created=1", output.getvalue())
         get_food.assert_called_once_with(123)
 
@@ -422,7 +517,31 @@ class USDAJSONTests(TestCase):
         nutrition = IngredientNutrition.objects.get()
         self.assertEqual(nutrition.source_id, "123")
         self.assertEqual(nutrition.kcal, 389)
+        self.assertEqual(nutrition.saturated_fat_g, 1.2)
+        self.assertEqual(nutrition.sugar_g, 1.0)
+        self.assertEqual(nutrition.sodium_mg, 5.0)
+        self.assertEqual(nutrition.license, "CC0 1.0")
+        self.assertEqual(
+            nutrition.retrieved_at,
+            datetime(2026, 1, 1, tzinfo=dt_timezone.utc),
+        )
         self.assertIn("created=1", output.getvalue())
+
+    def test_json_snapshot_without_extended_nutrients_still_imports(self):
+        snapshot = self.snapshot()
+        for field in ("saturated_fat_g", "sugar_g", "sodium_mg"):
+            snapshot["foods"][0]["nutrients"].pop(field)
+
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "nutrition.json"
+            self.write_snapshot(path, snapshot)
+            call_command("import_usda_json", "--file", str(path), stdout=StringIO())
+
+        nutrition = IngredientNutrition.objects.get()
+        self.assertIsNone(nutrition.saturated_fat_g)
+        self.assertIsNone(nutrition.sugar_g)
+        self.assertIsNone(nutrition.sodium_mg)
+        self.assertEqual(nutrition.kcal, 389)
 
     def test_json_snapshot_dry_run_does_not_write(self):
         with TemporaryDirectory() as directory:
@@ -579,6 +698,30 @@ class USDABulkParserTests(BulkDatasetMixin, TestCase):
         self.assertEqual(record["carbs_g"], 66.3)
         self.assertEqual(record["fat_g"], 6.9)
         self.assertEqual(record["fiber_g"], 10.6)
+
+    def test_parses_extended_nutrients(self):
+        record = self.parse_dataset(
+            [
+                self.food(
+                    extra_nutrients={
+                        1258: ("Fatty acids, total saturated", "g", 1.2),
+                        2000: ("Sugars, total including NLEA", "g", 1.0),
+                        1093: ("Sodium, Na", "mg", 5.0),
+                    }
+                )
+            ]
+        )[0]
+
+        self.assertEqual(record["saturated_fat_g"], 1.2)
+        self.assertEqual(record["sugar_g"], 1.0)
+        self.assertEqual(record["sodium_mg"], 5.0)
+
+    def test_extended_nutrients_are_null_when_absent(self):
+        record = self.parse_dataset([self.food()])[0]
+
+        self.assertIsNone(record["saturated_fat_g"])
+        self.assertIsNone(record["sugar_g"])
+        self.assertIsNone(record["sodium_mg"])
 
     def test_parses_sr_legacy_food(self):
         record = self.parse_dataset([self.food(data_type="SR Legacy")])[0]
@@ -1117,6 +1260,7 @@ class NormalizeMeasureTests(TestCase):
     def test_normalizes_plural_spellings(self):
         self.assertEqual(normalize_measure("tablespoons"), "tbsp")
         self.assertEqual(normalize_measure("slices"), "slice")
+        self.assertEqual(normalize_measure("centilitres"), "cl")
 
     def test_drops_a_reference_amount(self):
         self.assertIsNone(normalize_measure("RACC"))
@@ -1161,6 +1305,45 @@ class ParsePortionsTests(TestCase):
         self.assertEqual(record["amount"], 1.0)
         self.assertEqual(record["gram_weight"], 152.0)
         self.assertEqual(record["sequence"], 2)
+
+    def test_records_conversion_provenance(self):
+        record = parse_portions(self.portions())[0]
+
+        self.assertEqual(record["measurement_system"], "us")
+        self.assertEqual(
+            record["conversion_source"], "USDA FoodData Central foodPortions"
+        )
+        self.assertEqual(record["confidence"], 0.9)
+
+    def test_records_metric_mass_conversions_as_certain(self):
+        record = parse_portions(
+            self.portions(
+                modifier="g",
+                measureUnit={"id": 1002, "name": "g", "abbreviation": "g"},
+            )
+        )[0]
+
+        self.assertEqual(record["measurement_system"], "metric")
+        self.assertEqual(record["confidence"], 1.0)
+
+    def test_records_count_conversions_as_less_certain(self):
+        record = parse_portions(
+            self.portions(
+                modifier="each",
+                measureUnit={"id": 1003, "name": "each", "abbreviation": "ea"},
+            )
+        )[0]
+
+        self.assertEqual(record["measurement_system"], "unspecified")
+        self.assertEqual(record["confidence"], 0.8)
+
+    def test_records_the_preparation_state_from_the_food(self):
+        food = self.portions()
+        food["description"] = "Rice, white, cooked"
+
+        record = parse_portions(food)[0]
+
+        self.assertEqual(record["preparation_state"], "cooked")
 
     def test_reads_the_unit_from_the_sr_modifier(self):
         record = parse_portions(
@@ -1350,6 +1533,15 @@ class ParseAmountTests(TestCase):
     def test_leaves_no_remainder_for_a_bare_amount(self):
         self.assertEqual(parse_amount("2"), (2, None, ""))
 
+    def test_reads_a_pdf_fraction_glyph_as_a_lower_bound(self):
+        # The PDFs encode fractions as stray capitals; the integer part is a
+        # safe lower bound, but the glyph must not become a litre.
+        self.assertEqual(parse_amount("2 L cups chickpeas"), (2, "cup", "chickpeas"))
+        self.assertEqual(parse_amount("1 V tsp salt"), (1, "tsp", "salt"))
+
+    def test_keeps_a_lone_capital_l_as_litres_without_a_following_measure(self):
+        self.assertEqual(parse_amount("1 L milk"), (1, "l", "milk"))
+
 
 class GramsForTests(TestCase):
     def test_exact_measure_match(self):
@@ -1508,6 +1700,27 @@ class ComputeNutritionTests(TestCase):
 
         self.assertAlmostEqual(result.per_serving["kcal"], result.totals["kcal"])
 
+    def test_coverage_is_the_share_of_lines_that_resolved(self):
+        result = compute(
+            self.lines(("Rolled oats", "1 cup"), ("Salt", "to taste")),
+            servings=2,
+        )
+
+        self.assertAlmostEqual(coverage(result), 0.5)
+
+    def test_a_partial_sum_is_not_reliable(self):
+        result = compute(
+            self.lines(("Rolled oats", "1 cup"), ("Salt", "to taste")),
+            servings=2,
+        )
+
+        self.assertFalse(is_reliable(result, servings=2))
+
+    def test_unknown_servings_are_never_reliable(self):
+        result = compute(self.lines(("Rolled oats", "1 cup")), servings=1)
+
+        self.assertFalse(is_reliable(result, servings=None))
+
 
 class RecipeModelTests(TestCase):
     def test_slug_is_the_idempotency_key_and_may_be_blank(self):
@@ -1579,6 +1792,12 @@ class SplitQuantityTests(TestCase):
 
     def test_name_only_line_carries_no_quantity(self):
         self.assertEqual(split_quantity("*Fresh butternut squash"), ("", "*Fresh butternut squash"))
+
+    def test_printed_range_is_a_quantity(self):
+        quantity, name = split_quantity("2-4 Tbsp Fresh lime juice (optional)")
+
+        self.assertEqual(quantity, "2-4 Tbsp")
+        self.assertEqual(name, "Fresh lime juice (optional)")
 
 
 class RecipePDFTests(TestCase):
@@ -2040,6 +2259,19 @@ class RecipeImportCommandTests(TestCase):
             mapping,
         )
 
+    def test_ambiguous_aliases_resolve_to_the_lower_calorie_option(self):
+        # A computed panel is a lower bound, so "X or Y" must never pick the
+        # more calorie-dense reading. Aliases without a lower option are dropped
+        # rather than left pointing at the higher one.
+        alias_file = Path(__file__).with_name("data") / "aliases.json"
+        mapping = json.loads(alias_file.read_text())
+
+        self.assertEqual(mapping["lard or butter"], "Butter, salted")
+        self.assertEqual(mapping["raisins or currants"], "Currants, zante, dried")
+        self.assertTrue(mapping["heavy cream or whole milk"].startswith("Milk, whole"))
+        self.assertNotIn("potato starch or cornstarch", mapping)
+        self.assertNotIn("chicken broth or water", mapping)
+
     @patch("recipes.management.commands.import_recipe.parse_pdf")
     def test_reset_removes_recipes_and_junk_ingredients(self, parse_pdf):
         Recipe.objects.create(name="Old Recipe", slug="old-recipe")
@@ -2093,6 +2325,49 @@ class RecipeImportCommandTests(TestCase):
         self.assertFalse(Nutrition.objects.exists())
         self.assertIn("unresolved=2", stdout.getvalue())
         self.assertIn("no nutrition", stderr.getvalue())
+
+    @patch("recipes.management.commands.import_recipe.parse_pdf")
+    def test_partial_ingredient_coverage_is_stored_as_a_lower_bound(self, parse_pdf):
+        onions = Ingredient.objects.create(name="Fresh onions, chopped")
+        IngredientNutrition.objects.create(
+            ingredient=onions, kcal=40, protein_g=1.1, carbs_g=9.3,
+            fat_g=0.1, fiber_g=1.7, serving_size_g=100,
+            source="USDA", source_id="1",
+        )
+        IngredientMeasure.objects.create(
+            ingredient=onions, measure="cup", source_label="cup",
+            amount=1.0, gram_weight=160.0, sequence=1,
+        )
+        parse_pdf.return_value = self.recipe_data(
+            ingredients=["¼ cup Fresh onions, chopped", "1 cup Unknown ingredient"]
+        )
+
+        call_command("import_recipe", str(self.pdf()), stdout=StringIO())
+
+        nutrition = Nutrition.objects.get()
+        self.assertEqual((nutrition.lines_used, nutrition.lines_total), (1, 2))
+        self.assertAlmostEqual(nutrition.kcal, 16 / 6)
+
+    @patch("recipes.management.commands.import_recipe.parse_pdf")
+    def test_unknown_servings_do_not_publish_per_serving_calories(self, parse_pdf):
+        onions = Ingredient.objects.create(name="Fresh onions, chopped")
+        IngredientNutrition.objects.create(
+            ingredient=onions, kcal=40, protein_g=1.1, carbs_g=9.3,
+            fat_g=0.1, fiber_g=1.7, serving_size_g=100,
+            source="USDA", source_id="1",
+        )
+        IngredientMeasure.objects.create(
+            ingredient=onions, measure="cup", source_label="cup",
+            amount=1.0, gram_weight=160.0, sequence=1,
+        )
+        parse_pdf.return_value = self.recipe_data(
+            servings=None, ingredients=["¼ cup Fresh onions, chopped"]
+        )
+
+        call_command("import_recipe", str(self.pdf()), stdout=StringIO())
+
+        self.assertIsNone(Recipe.objects.get().servings)
+        self.assertFalse(Nutrition.objects.exists())
 
     @patch("recipes.management.commands.import_recipe.parse_pdf")
     def test_dry_run_does_not_write(self, parse_pdf):
@@ -2188,6 +2463,362 @@ class RecipeImportCommandTests(TestCase):
         self.assertIn("could not read", stderr.getvalue())
 
 
+class RecomputeNutritionCommandTests(TestCase):
+    def ingredient(self, name="Rolled oats"):
+        ingredient = Ingredient.objects.create(name=name)
+        IngredientNutrition.objects.create(
+            ingredient=ingredient, kcal=389, protein_g=16.9, carbs_g=66.3,
+            fat_g=6.9, fiber_g=10.6, serving_size_g=100,
+            source="USDA", source_id=name,
+        )
+        IngredientMeasure.objects.create(
+            ingredient=ingredient, measure="cup", source_label="cup",
+            amount=1.0, gram_weight=90.0, sequence=1,
+        )
+        return ingredient
+
+    def test_keeps_a_partial_computed_panel_as_a_lower_bound(self):
+        recipe = Recipe.objects.create(name="Oats and mystery", servings=2)
+        oats = self.ingredient()
+        RecipeIngredient.objects.create(
+            recipe=recipe, ingredient=oats, quantity_text="1 cup", position=1
+        )
+        RecipeIngredient.objects.create(
+            recipe=recipe,
+            ingredient=Ingredient.objects.create(name="Mystery"),
+            quantity_text="1 cup",
+            position=2,
+        )
+
+        call_command("recompute_nutrition", stdout=StringIO())
+
+        nutrition = Nutrition.objects.get()
+        self.assertEqual(nutrition.method, "computed")
+        self.assertEqual((nutrition.lines_used, nutrition.lines_total), (1, 2))
+        self.assertAlmostEqual(nutrition.kcal, 350.1 / 2)
+
+    def test_removes_a_panel_when_nothing_resolves(self):
+        recipe = Recipe.objects.create(name="Mystery", servings=2)
+        RecipeIngredient.objects.create(
+            recipe=recipe,
+            ingredient=Ingredient.objects.create(name="Mystery"),
+            quantity_text="1 cup",
+            position=1,
+        )
+        Nutrition.objects.create(
+            recipe=recipe, kcal=1, protein_g=0, carbs_g=0, fat_g=0,
+            fiber_g=0, method="computed", lines_used=1, lines_total=2,
+        )
+
+        call_command("recompute_nutrition", stdout=StringIO())
+
+        self.assertFalse(Nutrition.objects.exists())
+
+    def test_removes_a_panel_that_measures_no_calories(self):
+        recipe = Recipe.objects.create(name="Seasoned water", servings=2)
+        salt = Ingredient.objects.create(name="Salt, table")
+        IngredientNutrition.objects.create(
+            ingredient=salt, kcal=0, protein_g=0, carbs_g=0, fat_g=0,
+            fiber_g=0, serving_size_g=100, source="USDA", source_id="salt",
+        )
+        IngredientMeasure.objects.create(
+            ingredient=salt, measure="tsp", source_label="tsp",
+            amount=1.0, gram_weight=6.0, sequence=1,
+        )
+        RecipeIngredient.objects.create(
+            recipe=recipe, ingredient=salt, quantity_text="1 tsp", position=1
+        )
+        Nutrition.objects.create(
+            recipe=recipe, kcal=0, protein_g=0, carbs_g=0, fat_g=0,
+            fiber_g=0, method="computed", lines_used=1, lines_total=2,
+        )
+
+        call_command("recompute_nutrition", stdout=StringIO())
+
+        self.assertFalse(Nutrition.objects.exists())
+
+    def test_removes_a_panel_when_servings_are_unknown(self):
+        recipe = Recipe.objects.create(name="Oats", servings=None)
+        oats = self.ingredient()
+        RecipeIngredient.objects.create(
+            recipe=recipe, ingredient=oats, quantity_text="1 cup", position=1
+        )
+
+        call_command("recompute_nutrition", stdout=StringIO())
+
+        self.assertFalse(Nutrition.objects.exists())
+
+    def test_creates_a_panel_when_every_line_resolves(self):
+        recipe = Recipe.objects.create(name="Oats", servings=2)
+        oats = self.ingredient()
+        RecipeIngredient.objects.create(
+            recipe=recipe, ingredient=oats, quantity_text="1 cup", position=1
+        )
+
+        call_command("recompute_nutrition", stdout=StringIO())
+
+        nutrition = Nutrition.objects.get()
+        self.assertEqual(nutrition.method, "computed")
+        self.assertAlmostEqual(nutrition.kcal, 350.1 / 2)
+        self.assertEqual((nutrition.lines_used, nutrition.lines_total), (1, 1))
+
+    def test_printed_panels_are_left_alone(self):
+        recipe = Recipe.objects.create(name="Printed", servings=2)
+        Nutrition.objects.create(
+            recipe=recipe, kcal=250, protein_g=1, carbs_g=1, fat_g=1,
+            fiber_g=0, method="source",
+        )
+
+        call_command("recompute_nutrition", stdout=StringIO())
+
+        self.assertEqual(Nutrition.objects.get().kcal, 250)
+
+    def test_report_lists_unresolved_lines(self):
+        recipe = Recipe.objects.create(name="Oats and mystery", servings=2)
+        oats = self.ingredient()
+        RecipeIngredient.objects.create(
+            recipe=recipe, ingredient=oats, quantity_text="1 cup", position=1
+        )
+        RecipeIngredient.objects.create(
+            recipe=recipe,
+            ingredient=Ingredient.objects.create(name="Mystery"),
+            quantity_text="1 cup",
+            position=2,
+        )
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        report = Path(directory.name) / "nutrition.txt"
+
+        call_command(
+            "recompute_nutrition", "--report", str(report), stdout=StringIO()
+        )
+
+        self.assertIn("Mystery", report.read_text())
+
+
+class RematchIngredientsCommandTests(TestCase):
+    def setUp(self):
+        self.directory = TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+
+    def aliases(self, mapping):
+        path = Path(self.directory.name) / "aliases.json"
+        path.write_text(json.dumps(mapping), encoding="utf-8")
+        return path
+
+    def measured(self, name="Butter, salted"):
+        ingredient = Ingredient.objects.create(name=name)
+        IngredientNutrition.objects.create(
+            ingredient=ingredient, kcal=717, protein_g=0.9, carbs_g=0.1,
+            fat_g=81, fiber_g=0, serving_size_g=100,
+            source="USDA", source_id=name,
+        )
+        return ingredient
+
+    def test_repoints_a_bare_ingredient_at_its_measured_match(self):
+        target = self.measured()
+        bare = Ingredient.objects.create(name="butter")
+        recipe = Recipe.objects.create(name="Cake", servings=4)
+        RecipeIngredient.objects.create(
+            recipe=recipe, ingredient=bare, quantity_text="1 cup", position=1
+        )
+
+        call_command(
+            "rematch_ingredients",
+            "--aliases",
+            str(self.aliases({"butter": target.name})),
+            stdout=StringIO(),
+        )
+
+        self.assertEqual(RecipeIngredient.objects.get().ingredient, target)
+        self.assertFalse(Ingredient.objects.filter(name="butter").exists())
+        target.refresh_from_db()
+        self.assertIn("butter", target.aliases)
+
+    def test_leaves_measured_ingredients_alone(self):
+        target = self.measured()
+        recipe = Recipe.objects.create(name="Cake", servings=4)
+        RecipeIngredient.objects.create(
+            recipe=recipe, ingredient=target, quantity_text="1 cup", position=1
+        )
+
+        call_command(
+            "rematch_ingredients",
+            "--aliases",
+            str(self.aliases({"butter": target.name})),
+            stdout=StringIO(),
+        )
+
+        self.assertEqual(RecipeIngredient.objects.get().ingredient, target)
+        self.assertNotIn("butter", target.aliases)
+
+    def test_dry_run_does_not_change_rows(self):
+        target = self.measured()
+        bare = Ingredient.objects.create(name="butter")
+        recipe = Recipe.objects.create(name="Cake", servings=4)
+        RecipeIngredient.objects.create(
+            recipe=recipe, ingredient=bare, quantity_text="1 cup", position=1
+        )
+
+        call_command(
+            "rematch_ingredients",
+            "--aliases",
+            str(self.aliases({"butter": target.name})),
+            "--dry-run",
+            stdout=StringIO(),
+        )
+
+        self.assertEqual(RecipeIngredient.objects.get().ingredient, bare)
+        self.assertTrue(Ingredient.objects.filter(name="butter").exists())
+
+    def test_report_lists_names_that_still_have_no_nutrition(self):
+        recipe = Recipe.objects.create(name="Cake", servings=4)
+        RecipeIngredient.objects.create(
+            recipe=recipe,
+            ingredient=Ingredient.objects.create(name="Mystery"),
+            quantity_text="1 cup",
+            position=1,
+        )
+        report = Path(self.directory.name) / "unresolved.txt"
+
+        call_command(
+            "rematch_ingredients",
+            "--aliases",
+            str(self.aliases({})),
+            "--report",
+            str(report),
+            stdout=StringIO(),
+        )
+
+        self.assertIn("Mystery", report.read_text())
+
+
+class ValidateNutritionCommandTests(TestCase):
+    def setUp(self):
+        self.directory = TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+
+    def measured(self, name="Rolled oats", kcal=200):
+        ingredient = Ingredient.objects.create(name=name)
+        IngredientNutrition.objects.create(
+            ingredient=ingredient, kcal=kcal, protein_g=0, carbs_g=0, fat_g=0,
+            fiber_g=0, serving_size_g=100, source="USDA", source_id=name,
+        )
+        IngredientMeasure.objects.create(
+            ingredient=ingredient, measure="cup", source_label="cup",
+            amount=1.0, gram_weight=100.0, sequence=1,
+        )
+        return ingredient
+
+    def printed(self, name, kcal, servings, ingredient=None, quantity="1 cup"):
+        recipe = Recipe.objects.create(name=name, servings=servings)
+        Nutrition.objects.create(
+            recipe=recipe, kcal=kcal, protein_g=0, carbs_g=0, fat_g=0,
+            fiber_g=0, method="source",
+        )
+        if ingredient is not None:
+            RecipeIngredient.objects.create(
+                recipe=recipe, ingredient=ingredient, quantity_text=quantity,
+                position=1,
+            )
+        return recipe
+
+    def test_scores_computed_against_the_printed_panel(self):
+        ingredient = self.measured()
+        self.printed("Exact", 100, 2, ingredient)
+        out = StringIO()
+
+        call_command("validate_nutrition", stdout=out)
+
+        text = out.getvalue()
+        self.assertIn("printed=1 compared=1 unmeasurable=0", text)
+        self.assertIn("median_ratio=1.00", text)
+        self.assertIn("within_10=1", text)
+
+    def test_recipe_without_resolved_lines_is_unmeasurable(self):
+        self.printed("No lines", 100, 2)
+        out = StringIO()
+
+        call_command("validate_nutrition", stdout=out)
+
+        self.assertIn("unmeasurable=1", out.getvalue())
+        self.assertIn("unmeasurable No lines", out.getvalue())
+
+    def test_report_lists_the_comparison_and_unresolved_lines(self):
+        ingredient = self.measured()
+        recipe = self.printed("Partial", 100, 2, ingredient)
+        RecipeIngredient.objects.create(
+            recipe=recipe,
+            ingredient=Ingredient.objects.create(name="Mystery"),
+            quantity_text="1 cup",
+            position=2,
+        )
+        report = Path(self.directory.name) / "validation.txt"
+
+        call_command(
+            "validate_nutrition", "--report", str(report), stdout=StringIO()
+        )
+
+        text = report.read_text()
+        self.assertIn("Partial", text)
+        self.assertIn("Mystery", text)
+
+
+class NutritionGapsCommandTests(TestCase):
+    def setUp(self):
+        self.directory = TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+
+    def measured(self, name="Nuts, almonds", kcal=579, grams=140):
+        ingredient = Ingredient.objects.create(name=name)
+        IngredientNutrition.objects.create(
+            ingredient=ingredient, kcal=kcal, protein_g=0, carbs_g=0, fat_g=0,
+            fiber_g=0, serving_size_g=100, source="USDA", source_id=name,
+        )
+        IngredientMeasure.objects.create(
+            ingredient=ingredient, measure="cup", source_label="cup",
+            amount=1.0, gram_weight=grams, sequence=1,
+        )
+        return ingredient
+
+    def bare_line(self, name, quantity):
+        recipe = Recipe.objects.create(name="Cake", servings=4)
+        RecipeIngredient.objects.create(
+            recipe=recipe,
+            ingredient=Ingredient.objects.create(name=name),
+            quantity_text=quantity,
+            position=1,
+        )
+
+    def test_ranks_an_unresolved_name_by_estimated_calories(self):
+        self.measured()
+        self.bare_line("shelled sweet almonds", "1 cup")
+        out = StringIO()
+
+        call_command("nutrition_gaps", stdout=out)
+
+        text = out.getvalue()
+        self.assertIn("unresolved_names=1 unresolved_lines=1", text)
+        self.assertIn("shelled sweet almonds", text)
+        self.assertIn("Nuts, almonds", text)
+        self.assertIn("811 kcal", text)
+
+    def test_report_counts_lines_that_have_no_amount(self):
+        self.measured()
+        self.bare_line("salt to taste", "to taste")
+        report = Path(self.directory.name) / "gaps.txt"
+
+        call_command(
+            "nutrition_gaps", "--report", str(report), stdout=StringIO()
+        )
+
+        self.assertIn("no amount=1", report.read_text())
+
+    def test_rejects_an_out_of_range_score(self):
+        with self.assertRaisesMessage(CommandError, "--min-score"):
+            call_command("nutrition_gaps", "--min-score", "2", stdout=StringIO())
+
+
 class OpenRecipeArchiveParserTests(TestCase):
     def test_normalises_word_numbers_and_old_units(self):
         cases = {
@@ -2201,6 +2832,8 @@ class OpenRecipeArchiveParserTests(TestCase):
             "a pinch of salt": ("1 pinch", "salt"),
             "seven eggs": ("7", "egg"),
             "1 (14-ounce) can tomatoes": ("1 can", "tomatoes"),
+            "3 1/2 cup half and half": ("3 1/2 cup", "half and half"),
+            "1 pint and a half of milk": ("1 1/2 pint", "milk"),
         }
 
         for line, expected in cases.items():
@@ -2216,6 +2849,71 @@ class OpenRecipeArchiveParserTests(TestCase):
         )
         self.assertEqual(parse_ingredient("Bit of bay leaf")[:2], ("", "bay leaf"))
         self.assertIsNone(parse_ingredient("1 cup"))
+
+    def test_measurements_are_moved_out_of_names(self):
+        cases = {
+            "1/4-1/2 cup chopped parsley": ("1/4-1/2 cup", "chopped parsley"),
+            "1 cup + 2 1/2 Tbsp Butter, divided": (
+                "1 cup + 2 1/2 tbsp",
+                "Butter",
+            ),
+            "½ cup + 2 tablespoons (150ml) cold whole milk": (
+                "1/2 cup + 2 tbsp",
+                "cold whole milk",
+            ),
+            "All-purpose flour 3 cups": ("3 cup", "All-purpose flour"),
+            "Active dry yeast 1 tbsp": ("1 tbsp", "Active dry yeast"),
+            "Salt - 1 1/2 teaspoons": ("1 1/2 tsp", "Salt"),
+            ".5 TB ground allspice": ("1/2 tbsp", "ground allspice"),
+            "Light soy sauce, 1 tbsp": ("1 tbsp", "Light soy sauce"),
+            "Nearly 2 cups of sugar": ("2 cup", "sugar"),
+            "50-70% dark chocolate chips": ("", "dark chocolate chips"),
+            "½-1 teaspoon red-pepper flakes.": ("1/2-1 tsp", "red-pepper flakes"),
+            "1 15 oz can diced tomatoes": ("1 15 oz can", "diced tomatoes"),
+            "4 28 oz cans of whole or diced tomatoes": (
+                "4 28 oz cans",
+                "whole or diced tomatoes",
+            ),
+            "100 g / ½ cups butter": ("100 g / 1/2 cup", "butter"),
+            "2 heaped tbsp Set honey": ("2 heaped tbsp", "Set honey"),
+            "1/2 metric cup (~125ml) buckwheat": (
+                "1/2 metric cup",
+                "buckwheat",
+            ),
+            "1⁄2 cup flour": ("1/2 cup", "flour"),
+            "2 and 1/4 teaspoons Active Dry Yeast": (
+                "2 1/4 tsp",
+                "Active Dry Yeast",
+            ),
+            "Tablespoon of olive oil": ("1 tbsp", "olive oil"),
+            "33cl bottles of brown beer": ("33 cl bottles", "brown beer"),
+            "<1 liter of milk": ("1 l", "milk"),
+            "1 tbsp /~14 grams unsalted butter": (
+                "1 tbsp / 14 g",
+                "unsalted butter",
+            ),
+            "1 clove/teaspoon Garlic": ("1 clove / 1 tsp", "Garlic"),
+            "6 or 7 tbsp of sugar": ("6-7 tbsp", "sugar"),
+            "Overfilled Teaspoon Mixed Spice": (
+                "1 overfilled tsp",
+                "Mixed Spice",
+            ),
+            "1 cup /240 milliliters crème fraîche or heavy cream": (
+                "1 cup / 240 ml",
+                "crème fraîche or heavy cream",
+            ),
+        }
+
+        for line, expected in cases.items():
+            with self.subTest(line=line):
+                self.assertEqual(parse_ingredient(line)[:2], expected)
+
+    def test_percentages_and_bare_amounts_are_not_quantities(self):
+        self.assertEqual(
+            parse_ingredient("4% sea salt by cabbage weight")[:2],
+            ("", "sea salt"),
+        )
+        self.assertIsNone(parse_ingredient("12 oz"))
 
     def test_servings_are_read_from_the_stated_yield(self):
         self.assertEqual(parse_servings("Makes 6 servings")[0], 6)
@@ -2295,6 +2993,145 @@ class OpenRecipeArchiveParserTests(TestCase):
         }
         data.update(overrides)
         return data
+
+
+class PublicDomainRecipeParserTests(TestCase):
+    def test_vague_suggestions_are_not_ingredients(self):
+        cases = (
+            "Any extra herbs or spices to your taste",
+            "Any ingredients you want",
+            "Any kind of firm, thin, sliced bread (Sourdough, Baguette)",
+            "Any lean, tough cut of meat (ex. chuck, round steak, etc.)",
+            "Any other vegetables you want",
+            "Any toppings if desired (chocolate chips, ...) although it is very enjoyable on its own",
+        )
+
+        for line in cases:
+            with self.subTest(line=line):
+                self.assertIsNone(parse_ingredient_line(line))
+
+    def test_trailing_measurements_and_optional_words_are_cleaned(self):
+        cases = {
+            "Greek yogurt, 2 cups": ("2 cup", "Greek yogurt"),
+            "Salt and pepper to taste": ("", "Salt and pepper"),
+            "Cream 4tbsp (or cashew paste)": ("4 tbsp", "Cream"),
+        }
+
+        for line, expected in cases.items():
+            with self.subTest(line=line):
+                parsed = parse_ingredient_line(line)
+                self.assertEqual((parsed["quantity"], parsed["name"]), expected)
+
+    def test_period_inside_parentheses_does_not_truncate_the_name(self):
+        parsed = parse_ingredient_line("Tortillas (6 in. corn)")
+
+        self.assertEqual(parsed["name"], "Tortillas (6 in. corn)")
+
+    def test_word_number_and_dozen_yields_are_read(self):
+        text = (
+            '---\ntitle: "Greek Easter Cookies"\n---\n'
+            "- 🍽️ Servings: Five-dozen individual cookies\n\n"
+            "## Ingredients\n- 1 cup flour\n\n"
+            "## Directions\n1. Bake.\n"
+        )
+
+        parsed = parse_recipe(text, "greek-easter-cookies.md")
+
+        self.assertEqual(parsed.servings, 60)
+
+    def test_vague_yields_stay_unknown(self):
+        text = (
+            '---\ntitle: "Mystery"\n---\n'
+            "- 🍽️ Servings: A batch like this will last for two days.\n\n"
+            "## Ingredients\n- 1 cup flour\n\n"
+            "## Directions\n1. Bake.\n"
+        )
+
+        parsed = parse_recipe(text, "mystery.md")
+
+        self.assertIsNone(parsed.servings)
+
+
+class IngredientCleanupTests(TestCase):
+    def test_names_reduce_to_the_ingredient(self):
+        cases = {
+            "/500g liver (chicken, beef, poultry etc.)": "liver",
+            "00 or 0 flour": "flour",
+            "Around three to four large turnips with their greens attached": (
+                "turnips"
+            ),
+            "700ml red wine (I prefer Primitivo/Zinfandel)": "red wine",
+            "Cassia bark (or cinnamon stick), 2 inches": "Cassia bark",
+            "Potatoes (yellow or brown), I don't count but 10": "Potatoes",
+            "mushrooms, or chopped clams or oysters (optional)": "mushrooms",
+            "or three onions (preferably red)": "onions",
+            "pinches of (Mozzarella, Oaxaca, or Montery Jack cheese)": (
+                "Montery Jack cheese"
+            ),
+            "spoon ginger powder (or a bit of fresh ginger)": "ginger powder",
+            "spoon of butter": "butter",
+            "Some slices of bell pepper**": "bell pepper",
+            "branches of fresh _epazote_": "fresh epazote",
+            "whole ckicken weighing close to 2,5kg": "whole ckicken",
+            "3 onions": "onions",
+            "or less of Xanthan Gum": "Xanthan Gum",
+            "Dashi powder or any desired seasonings": "Dashi powder",
+            "18% sour cream": "sour cream",
+            "95% ABV grain alcohol": "grain alcohol",
+            "2-4% sea salt by cabbage weight": "sea salt",
+            "recipe of your favorite tuna salad": "tuna salad",
+            "live lobster that weighs ~750 grams": "live lobster",
+            "Kefir about 150-300 ml per serving": "Kefir",
+            "Condiments of your choice": "Condiments",
+            "pasta, preferably penne": "pasta",
+            "Optional herbs and spices": "herbs and spices",
+            "milk (you can use water instead)": "milk",
+            "sardines (~4oz)": "sardines",
+            "Apricot jam (about": "Apricot jam",
+            "yellow onion diced": "yellow onion",
+            "really whatever you like": "",
+            "to your palate": "",
+            "finely diced": "",
+        }
+
+        for name, expected in cases.items():
+            with self.subTest(name=name):
+                self.assertEqual(canonical_ingredient_name(name), expected)
+
+    def test_descriptive_names_are_kept(self):
+        for name in (
+            "rye flour",
+            "whole milk",
+            "red pepper flakes",
+            "string beans",
+            "Salt and freshly ground Black Pepper",
+        ):
+            with self.subTest(name=name):
+                self.assertEqual(canonical_ingredient_name(name), name)
+
+    def test_equipment_is_recognised(self):
+        for name in ("Aluminum Foil", "tin foil", "baking paper", "skewers", "twine"):
+            with self.subTest(name=name):
+                self.assertTrue(is_equipment(name))
+
+    def test_foods_that_look_like_equipment_are_kept(self):
+        for name in ("red pepper flakes", "string beans", "glass noodles"):
+            with self.subTest(name=name):
+                self.assertFalse(is_equipment(name))
+
+    def test_word_ranges_and_grade_flour_parse(self):
+        cases = {
+            "three to four eggs": ("3-4", "eggs"),
+            "two or three large onions": ("2-3 large", "onions"),
+            "650 g 00 or 0 flour": ("650 g", "flour"),
+            "00 flour": ("", "flour"),
+            "flour (0 or 00)": ("", "flour"),
+        }
+
+        for line, expected in cases.items():
+            with self.subTest(line=line):
+                parsed = parse_ingredient_line(line)
+                self.assertEqual((parsed["quantity"], parsed["name"]), expected)
 
 
 class OpenRecipeArchiveImportCommandTests(TestCase):

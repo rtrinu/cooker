@@ -17,6 +17,30 @@ ComputedNutrition = namedtuple(
     ("per_serving", "totals", "lines_used", "lines_total", "unresolved"),
 )
 
+# A computed panel is only trustworthy when nearly every ingredient line
+# converted. Unresolved lines can only make a total too low, so a sum built
+# from part of a recipe is not an estimate of that recipe -- it is the
+# nutrition of a different, smaller dish. Anything below this share is
+# reported rather than published as per-serving calories.
+MIN_COVERAGE = 0.75
+
+
+def coverage(computed):
+    """Share of ingredient lines that contributed to ``computed``, 0..1."""
+    if not computed.lines_total:
+        return 0.0
+    return computed.lines_used / computed.lines_total
+
+
+def is_reliable(computed, servings, minimum=MIN_COVERAGE):
+    """Whether ``computed`` is complete enough to publish as per serving.
+
+    A recipe with no known serving count cannot produce a per-serving figure
+    at all: dividing by an invented ``1`` silently turns a whole dish into one
+    serving.
+    """
+    return bool(servings) and coverage(computed) >= minimum
+
 
 def scale_nutrients(nutrition, grams):
     """Nutrients contained in ``grams`` of an ingredient.
