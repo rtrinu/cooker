@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from ninja import Schema
 
@@ -7,6 +7,7 @@ class IngredientOut(Schema):
     id: int
     name: str
     category: str
+    processing_status: str
 
 
 class IngredientMeasureOut(Schema):
@@ -16,6 +17,10 @@ class IngredientMeasureOut(Schema):
     amount: float
     gram_weight: float
     sequence: int
+    measurement_system: str
+    preparation_state: str
+    conversion_source: str
+    confidence: float | None = None
 
 
 class IngredientNutritionOut(Schema):
@@ -25,14 +30,24 @@ class IngredientNutritionOut(Schema):
     carbs_g: float | None = None
     fat_g: float | None = None
     fiber_g: float | None = None
+    saturated_fat_g: float | None = None
+    sugar_g: float | None = None
+    sodium_mg: float | None = None
     serving_size_g: float
     source: str
     source_id: str
     publication_date: date | None = None
+    confidence: float | None = None
+    verification_status: str
+    retrieved_at: datetime | None = None
+    license: str
+    attribution: str
 
 
 class IngredientDetailOut(IngredientOut):
     aliases: list[str]
+    processing_error: str
+    processed_at: datetime | None = None
     measures: list[IngredientMeasureOut]
     nutrition: list[IngredientNutritionOut]
 
@@ -88,8 +103,8 @@ class FinderRecipeOut(Schema):
     recipe: RecipeListOut
     matched: list[str]
     missing: list[str]
-    matched_lines: int
-    total_lines: int
+    matched_ingredients: int
+    total_ingredients: int
     pantry_coverage: float
 
 
@@ -113,6 +128,7 @@ class CuisineCountOut(Schema):
 class StatsOut(Schema):
     recipes: int
     ingredients: int
+    ingredients_total: int
     collections: int
     categories: list[CategoryCountOut]
     cuisines: list[CuisineCountOut]

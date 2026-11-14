@@ -25,7 +25,10 @@ def health(request):
 def stats(request):
     return {
         "recipes": Recipe.objects.count(),
-        "ingredients": Ingredient.objects.count(),
+        "ingredients": Ingredient.objects.filter(recipeingredient__isnull=False)
+        .distinct()
+        .count(),
+        "ingredients_total": Ingredient.objects.count(),
         "collections": Recipe.objects.exclude(collection="")
         .values("collection")
         .distinct()

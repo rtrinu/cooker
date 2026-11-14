@@ -16,13 +16,18 @@ def list_ingredients(
     request,
     q: str | None = None,
     category: str | None = None,
+    include_unused: bool = False,
 ):
-    ingredients = Ingredient.objects.order_by("name")
+    # The pantry is the index behind the recipes, not the whole USDA catalogue.
+    # Unused foods are still reachable by id and through the admin.
+    ingredients = Ingredient.objects.all()
+    if not include_unused:
+        ingredients = ingredients.filter(recipeingredient__isnull=False)
     if q:
         ingredients = ingredients.filter(name__icontains=q)
     if category:
         ingredients = ingredients.filter(category=category)
-    return ingredients
+    return ingredients.order_by("name").distinct()
 
 
 @router.get("/suggestions", response=list[IngredientOut])

@@ -82,6 +82,22 @@
           },
           {
             "in": "query",
+            "name": "cuisine",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cuisine"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
             "name": "contributor",
             "schema": {
               "anyOf": [
@@ -109,6 +125,70 @@
                 }
               ],
               "title": "Tag"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "kcal_min",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kcal Min"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "kcal_max",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kcal Max"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "protein_min",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Protein Min"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "protein_max",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Protein Max"
             },
             "required": false
           },
@@ -313,6 +393,16 @@
           },
           {
             "in": "query",
+            "name": "include_unused",
+            "schema": {
+              "default": false,
+              "title": "Include Unused",
+              "type": "boolean"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
             "name": "page",
             "schema": {
               "default": 1,
@@ -458,6 +548,24 @@
         "title": "CategoryCountOut",
         "type": "object"
       },
+      "CuisineCountOut": {
+        "properties": {
+          "cuisine": {
+            "title": "Cuisine",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cuisine",
+          "count"
+        ],
+        "title": "CuisineCountOut",
+        "type": "object"
+      },
       "StatsOut": {
         "properties": {
           "recipes": {
@@ -466,6 +574,10 @@
           },
           "ingredients": {
             "title": "Ingredients",
+            "type": "integer"
+          },
+          "ingredients_total": {
+            "title": "Ingredients Total",
             "type": "integer"
           },
           "collections": {
@@ -478,13 +590,22 @@
             },
             "title": "Categories",
             "type": "array"
+          },
+          "cuisines": {
+            "items": {
+              "$ref": "#/components/schemas/CuisineCountOut"
+            },
+            "title": "Cuisines",
+            "type": "array"
           }
         },
         "required": [
           "recipes",
           "ingredients",
+          "ingredients_total",
           "collections",
-          "categories"
+          "categories",
+          "cuisines"
         ],
         "title": "StatsOut",
         "type": "object"
@@ -655,6 +776,10 @@
             "title": "Category",
             "type": "string"
           },
+          "cuisine": {
+            "title": "Cuisine",
+            "type": "string"
+          },
           "contributor": {
             "title": "Contributor",
             "type": "string"
@@ -701,6 +826,7 @@
           "serving_size",
           "tags",
           "category",
+          "cuisine",
           "contributor",
           "source",
           "source_url",
@@ -768,12 +894,12 @@
             "title": "Missing",
             "type": "array"
           },
-          "matched_lines": {
-            "title": "Matched Lines",
+          "matched_ingredients": {
+            "title": "Matched Ingredients",
             "type": "integer"
           },
-          "total_lines": {
-            "title": "Total Lines",
+          "total_ingredients": {
+            "title": "Total Ingredients",
             "type": "integer"
           },
           "pantry_coverage": {
@@ -785,8 +911,8 @@
           "recipe",
           "matched",
           "missing",
-          "matched_lines",
-          "total_lines",
+          "matched_ingredients",
+          "total_ingredients",
           "pantry_coverage"
         ],
         "title": "FinderRecipeOut",
@@ -805,12 +931,17 @@
           "category": {
             "title": "Category",
             "type": "string"
+          },
+          "processing_status": {
+            "title": "Processing Status",
+            "type": "string"
           }
         },
         "required": [
           "id",
           "name",
-          "category"
+          "category",
+          "processing_status"
         ],
         "title": "IngredientOut",
         "type": "object"
@@ -888,6 +1019,10 @@
             "title": "Category",
             "type": "string"
           },
+          "cuisine": {
+            "title": "Cuisine",
+            "type": "string"
+          },
           "contributor": {
             "title": "Contributor",
             "type": "string"
@@ -949,6 +1084,7 @@
           "serving_size",
           "tags",
           "category",
+          "cuisine",
           "contributor",
           "source",
           "source_url",
@@ -1030,12 +1166,32 @@
             "title": "Category",
             "type": "string"
           },
+          "processing_status": {
+            "title": "Processing Status",
+            "type": "string"
+          },
           "aliases": {
             "items": {
               "type": "string"
             },
             "title": "Aliases",
             "type": "array"
+          },
+          "processing_error": {
+            "title": "Processing Error",
+            "type": "string"
+          },
+          "processed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processed At"
           },
           "measures": {
             "items": {
@@ -1056,7 +1212,9 @@
           "id",
           "name",
           "category",
+          "processing_status",
           "aliases",
+          "processing_error",
           "measures",
           "nutrition"
         ],
@@ -1088,6 +1246,29 @@
           "sequence": {
             "title": "Sequence",
             "type": "integer"
+          },
+          "measurement_system": {
+            "title": "Measurement System",
+            "type": "string"
+          },
+          "preparation_state": {
+            "title": "Preparation State",
+            "type": "string"
+          },
+          "conversion_source": {
+            "title": "Conversion Source",
+            "type": "string"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
           }
         },
         "required": [
@@ -1096,7 +1277,10 @@
           "source_label",
           "amount",
           "gram_weight",
-          "sequence"
+          "sequence",
+          "measurement_system",
+          "preparation_state",
+          "conversion_source"
         ],
         "title": "IngredientMeasureOut",
         "type": "object"
@@ -1162,6 +1346,39 @@
             ],
             "title": "Fiber G"
           },
+          "saturated_fat_g": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saturated Fat G"
+          },
+          "sugar_g": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sugar G"
+          },
+          "sodium_mg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sodium Mg"
+          },
           "serving_size_g": {
             "title": "Serving Size G",
             "type": "number"
@@ -1185,13 +1402,51 @@
               }
             ],
             "title": "Publication Date"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "verification_status": {
+            "title": "Verification Status",
+            "type": "string"
+          },
+          "retrieved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retrieved At"
+          },
+          "license": {
+            "title": "License",
+            "type": "string"
+          },
+          "attribution": {
+            "title": "Attribution",
+            "type": "string"
           }
         },
         "required": [
           "id",
           "serving_size_g",
           "source",
-          "source_id"
+          "source_id",
+          "verification_status",
+          "license",
+          "attribution"
         ],
         "title": "IngredientNutritionOut",
         "type": "object"

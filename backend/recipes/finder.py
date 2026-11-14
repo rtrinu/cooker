@@ -24,12 +24,14 @@ class FinderHit:
     recipe: object
     matched: list[str] = field(default_factory=list)
     missing: list[str] = field(default_factory=list)
-    matched_lines: int = 0
-    total_lines: int = 0
+    matched_ingredients: int = 0
+    total_ingredients: int = 0
 
     @property
     def pantry_coverage(self):
-        return self.matched_lines / self.total_lines if self.total_lines else 0.0
+        if not self.total_ingredients:
+            return 0.0
+        return self.matched_ingredients / self.total_ingredients
 
 
 def pantry_terms(raw):
@@ -69,9 +71,9 @@ def find_recipes(recipes, raw_ingredients, page=1, page_size=20):
 
     ``recipes`` is an iterable of ``Recipe`` objects with ``nutrition`` and
     ``ingredients__ingredient`` selected. Results are ranked by pantry terms
-    matched first, then by the share of recipe lines those terms cover, then by
-    recipes that actually carry nutrition, so the macro cards at the top are
-    the most useful ones.
+    matched first, then by the share of the recipe's distinct ingredients those
+    terms cover, then by recipes that actually carry nutrition, so the macro
+    cards at the top are the most useful ones.
     """
     terms = pantry_terms(raw_ingredients)
     if not terms:
@@ -85,14 +87,16 @@ def find_recipes(recipes, raw_ingredients, page=1, page_size=20):
         lines = list(recipe.ingredients.all())
         matched = []
         recipe_token_sets = []
+        ingredient_ids = set()
         for line in lines:
+            ingredient_ids.add(line.ingredient_id)
             tokens = all_ingredient_tokens.get(line.ingredient_id)
             if tokens is None:
                 tokens = ingredient_tokens(line.ingredient)
                 all_ingredient_tokens[line.ingredient_id] = tokens
             recipe_token_sets.append((line, tokens))
 
-        matched_lines = 0
+        matched_ingredient_ids = set()
         missing = []
         missing_seen = set()
         for line, tokens in recipe_token_sets:
@@ -105,21 +109,21 @@ def find_recipes(recipes, raw_ingredients, page=1, page_size=20):
                     matched_terms_seen.add(term.display)
                     break
             if line_matched:
-                matched_lines += 1
+                matched_ingredient_ids.add(line.ingredient_id)
             else:
                 key = line.ingredient.name.casefold()
                 if key not in missing_seen:
                     missing_seen.add(key)
                     missing.append(line.ingredient.name)
 
-        if matched_lines:
+        if matched_ingredient_ids:
             hits.append(
                 FinderHit(
                     recipe=recipe,
                     matched=matched,
                     missing=missing,
-                    matched_lines=matched_lines,
-                    total_lines=len(lines),
+                    matched_ingredients=len(matched_ingredient_ids),
+                    total_ingredients=len(ingredient_ids),
                 )
             )
 

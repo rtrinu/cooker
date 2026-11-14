@@ -30,6 +30,10 @@ def list_recipes(
     cuisine: str | None = None,
     contributor: str | None = None,
     tag: str | None = None,
+    kcal_min: float | None = None,
+    kcal_max: float | None = None,
+    protein_min: float | None = None,
+    protein_max: float | None = None,
 ):
     recipes = Recipe.objects.select_related("nutrition").order_by("name")
     if q:
@@ -44,6 +48,14 @@ def list_recipes(
         # JSONField containment is not supported on SQLite, so fall back to a
         # text match against the serialized list. Good enough for filtering.
         recipes = recipes.filter(tags__icontains=tag)
+    if kcal_min is not None:
+        recipes = recipes.filter(nutrition__kcal__gte=kcal_min)
+    if kcal_max is not None:
+        recipes = recipes.filter(nutrition__kcal__lte=kcal_max)
+    if protein_min is not None:
+        recipes = recipes.filter(nutrition__protein_g__gte=protein_min)
+    if protein_max is not None:
+        recipes = recipes.filter(nutrition__protein_g__lte=protein_max)
     return recipes
 
 
@@ -69,8 +81,8 @@ def find_by_ingredients(
                 "recipe": hit.recipe,
                 "matched": hit.matched,
                 "missing": hit.missing,
-                "matched_lines": hit.matched_lines,
-                "total_lines": hit.total_lines,
+                "matched_ingredients": hit.matched_ingredients,
+                "total_ingredients": hit.total_ingredients,
                 "pantry_coverage": hit.pantry_coverage,
             }
             for hit in hits

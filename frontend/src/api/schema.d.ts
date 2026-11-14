@@ -175,16 +175,27 @@ export interface components {
             /** Count */
             count: number;
         };
+        /** CuisineCountOut */
+        CuisineCountOut: {
+            /** Cuisine */
+            cuisine: string;
+            /** Count */
+            count: number;
+        };
         /** StatsOut */
         StatsOut: {
             /** Recipes */
             recipes: number;
             /** Ingredients */
             ingredients: number;
+            /** Ingredients Total */
+            ingredients_total: number;
             /** Collections */
             collections: number;
             /** Categories */
             categories: components["schemas"]["CategoryCountOut"][];
+            /** Cuisines */
+            cuisines: components["schemas"]["CuisineCountOut"][];
         };
         /** Input */
         Input: {
@@ -250,6 +261,8 @@ export interface components {
             tags: string[];
             /** Category */
             category: string;
+            /** Cuisine */
+            cuisine: string;
             /** Contributor */
             contributor: string;
             /** Source */
@@ -284,10 +297,10 @@ export interface components {
             matched: string[];
             /** Missing */
             missing: string[];
-            /** Matched Lines */
-            matched_lines: number;
-            /** Total Lines */
-            total_lines: number;
+            /** Matched Ingredients */
+            matched_ingredients: number;
+            /** Total Ingredients */
+            total_ingredients: number;
             /** Pantry Coverage */
             pantry_coverage: number;
         };
@@ -299,6 +312,8 @@ export interface components {
             name: string;
             /** Category */
             category: string;
+            /** Processing Status */
+            processing_status: string;
         };
         /** RecipeDetailOut */
         RecipeDetailOut: {
@@ -322,6 +337,8 @@ export interface components {
             tags: string[];
             /** Category */
             category: string;
+            /** Cuisine */
+            cuisine: string;
             /** Contributor */
             contributor: string;
             /** Source */
@@ -371,8 +388,14 @@ export interface components {
             name: string;
             /** Category */
             category: string;
+            /** Processing Status */
+            processing_status: string;
             /** Aliases */
             aliases: string[];
+            /** Processing Error */
+            processing_error: string;
+            /** Processed At */
+            processed_at?: string | null;
             /** Measures */
             measures: components["schemas"]["IngredientMeasureOut"][];
             /** Nutrition */
@@ -392,6 +415,14 @@ export interface components {
             gram_weight: number;
             /** Sequence */
             sequence: number;
+            /** Measurement System */
+            measurement_system: string;
+            /** Preparation State */
+            preparation_state: string;
+            /** Conversion Source */
+            conversion_source: string;
+            /** Confidence */
+            confidence?: number | null;
         };
         /** IngredientNutritionOut */
         IngredientNutritionOut: {
@@ -407,6 +438,12 @@ export interface components {
             fat_g?: number | null;
             /** Fiber G */
             fiber_g?: number | null;
+            /** Saturated Fat G */
+            saturated_fat_g?: number | null;
+            /** Sugar G */
+            sugar_g?: number | null;
+            /** Sodium Mg */
+            sodium_mg?: number | null;
             /** Serving Size G */
             serving_size_g: number;
             /** Source */
@@ -415,6 +452,16 @@ export interface components {
             source_id: string;
             /** Publication Date */
             publication_date?: string | null;
+            /** Confidence */
+            confidence?: number | null;
+            /** Verification Status */
+            verification_status: string;
+            /** Retrieved At */
+            retrieved_at?: string | null;
+            /** License */
+            license: string;
+            /** Attribution */
+            attribution: string;
         };
     };
     responses: never;
@@ -468,8 +515,13 @@ export interface operations {
             query?: {
                 q?: string | null;
                 category?: string | null;
+                cuisine?: string | null;
                 contributor?: string | null;
                 tag?: string | null;
+                kcal_min?: number | null;
+                kcal_max?: number | null;
+                protein_min?: number | null;
+                protein_max?: number | null;
                 page?: number;
                 page_size?: number | null;
             };
@@ -563,6 +615,7 @@ export interface operations {
             query?: {
                 q?: string | null;
                 category?: string | null;
+                include_unused?: boolean;
                 page?: number;
                 page_size?: number | null;
             };
