@@ -12,11 +12,19 @@ from urllib.request import Request, urlopen
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 
 from recipes.ingredient_cleanup import normalize_ingredient, should_skip_category
-from recipes.models import Ingredient, IngredientMeasure, IngredientNutrition
+from recipes.models import (
+    INGREDIENT_NUTRIENT_FIELDS,
+    NUTRIENT_FIELDS,
+    Ingredient,
+    IngredientMeasure,
+    IngredientNutrition,
+)
+from recipes.nutrition_sources import USDA, license_fields
 
-SOURCE = "USDA FoodData Central"
+SOURCE = USDA.name
 API_BASE_URL = "https://api.nal.usda.gov/fdc/v1"
 DEFAULT_TIMEOUT = 30
 DEFAULT_RETRIES = 3
@@ -27,8 +35,10 @@ NUTRIENT_SPECS = {
     "carbs_g": ((1005,), "g"),
     "fat_g": ((1004,), "g"),
     "fiber_g": ((1079, 2033), "g"),
+    "saturated_fat_g": ((1258,), "g"),
+    "sugar_g": ((2000, 1063), "g"),
+    "sodium_mg": ((1093,), "mg"),
 }
-NUTRIENT_FIELDS = ("kcal", "protein_g", "carbs_g", "fat_g", "fiber_g")
 
 UpsertResult = namedtuple("UpsertResult", ("created", "renamed", "name"))
 
@@ -125,7 +135,7 @@ def parse_amount(entry, expected_unit):
 def extract_nutrients(food, required=NUTRIENT_FIELDS):
     """Pull the tracked nutrients out of a food's foodNutrients list.
 
-    Every field in NUTRIENT_FIELDS is always returned. Fields listed in
+    Every field in ``NUTRIENT_SPECS`` is always returned. Fields listed in
     ``required`` raise when missing or unusable, which is what the single food
     API path wants; the rest come back as None so partial bulk records survive.
     """
@@ -258,7 +268,14 @@ def sync_measures(ingredient, portions):
     )
 
 
-def upsert_food(parsed, fdc_id, category=None, publication_date=None, portions=None):
+def upsert_food(
+    parsed,
+    fdc_id,
+    category=None,
+    publication_date=None,
+    portions=None,
+    retrieved_at=None,
+):
     """Store one parsed food.
 
     Returns whether the nutrition row was created, whether a duplicate USDA
@@ -274,14 +291,27 @@ def upsert_food(parsed, fdc_id, category=None, publication_date=None, portions=N
         ingredient = resolve_ingredient(parsed["name"], fdc_id)
         renamed = ingredient.name != parsed["name"]
 
+    update_fields = []
     if category and not ingredient.category:
         ingredient.category = category
-        ingredient.save(update_fields=["category"])
+        update_fields.append("category")
+    if ingredient.processing_status != "matched":
+        ingredient.processing_status = "matched"
+        ingredient.processing_error = ""
+        ingredient.processed_at = retrieved_at or timezone.now()
+        update_fields.extend(["processing_status", "processing_error", "processed_at"])
+    elif ingredient.processing_error:
+        ingredient.processing_error = ""
+        update_fields.append("processing_error")
+    if update_fields:
+        ingredient.save(update_fields=list(dict.fromkeys(update_fields)))
 
-    defaults = {field: parsed[field] for field in NUTRIENT_FIELDS}
+    defaults = {field: parsed.get(field) for field in INGREDIENT_NUTRIENT_FIELDS}
     defaults["serving_size_g"] = 100
     if publication_date is not None:
         defaults["publication_date"] = publication_date
+    defaults.update(license_fields(USDA))
+    defaults["retrieved_at"] = retrieved_at or timezone.now()
 
     _, was_created = IngredientNutrition.objects.update_or_create(
         ingredient=ingredient,

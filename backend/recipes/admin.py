@@ -13,20 +13,40 @@ from .models import (
 class IngredientMeasureInline(admin.TabularInline):
     model = IngredientMeasure
     extra = 0
-    fields = ("measure", "source_label", "amount", "gram_weight", "sequence")
+    fields = (
+        "measure",
+        "source_label",
+        "amount",
+        "gram_weight",
+        "sequence",
+        "measurement_system",
+        "preparation_state",
+        "conversion_source",
+        "confidence",
+    )
 
 
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
-    list_display = ("name", "category", "aliases")
-    list_filter = ("category",)
+    list_display = ("name", "category", "processing_status", "processed_at")
+    list_filter = ("category", "processing_status")
     search_fields = ("name",)
     inlines = [IngredientMeasureInline]
 
 
 @admin.register(IngredientMeasure)
 class IngredientMeasureAdmin(admin.ModelAdmin):
-    list_display = ("ingredient", "measure", "amount", "gram_weight", "sequence")
+    list_display = (
+        "ingredient",
+        "measure",
+        "amount",
+        "gram_weight",
+        "measurement_system",
+        "conversion_source",
+        "confidence",
+        "sequence",
+    )
+    list_filter = ("measurement_system", "conversion_source")
     search_fields = ("ingredient__name", "source_label")
 
 
@@ -40,10 +60,15 @@ class IngredientNutritionAdmin(admin.ModelAdmin):
         "carbs_g",
         "fat_g",
         "fiber_g",
+        "saturated_fat_g",
+        "sugar_g",
+        "sodium_mg",
+        "verification_status",
+        "confidence",
         "source",
         "source_id",
     )
-    list_filter = ("source",)
+    list_filter = ("source", "verification_status")
     search_fields = ("ingredient__name", "source_id")
 
 

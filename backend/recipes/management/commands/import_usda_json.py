@@ -1,10 +1,12 @@
 import argparse
 import json
 import math
+from datetime import datetime
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 
 from recipes.ingredient_cleanup import normalize_ingredient
 from recipes.management.commands.import_usda import (
@@ -15,6 +17,7 @@ from recipes.management.commands.import_usda import (
     positive_int,
     upsert_food,
 )
+from recipes.models import EXTENDED_NUTRIENT_FIELDS
 
 SNAPSHOT_VERSION = 1
 BASIS_AMOUNT = 100
@@ -45,6 +48,20 @@ def snapshot_amount(value, label):
     return amount
 
 
+def snapshot_retrieved_at(value):
+    """Parse the snapshot's retrieval timestamp, returning None if unusable."""
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed)
+    return parsed
+
+
+
 def validate_snapshot(snapshot):
     if not isinstance(snapshot, dict):
         raise USDADataError("snapshot must be an object")
@@ -68,6 +85,7 @@ def validate_snapshot(snapshot):
     if not isinstance(foods, list):
         raise USDADataError("snapshot foods must be a list")
 
+    retrieved_at = snapshot_retrieved_at(snapshot.get("retrieved_at"))
     records = []
     seen_ids = set()
     for index, food in enumerate(foods, start=1):
@@ -100,11 +118,22 @@ def validate_snapshot(snapshot):
             values[field] = snapshot_amount(
                 nutrients[field], f"food {fdc_id} nutrient {field}"
             )
+        # Snapshots written before the extended nutrients were added still
+        # validate: those fields simply stay unknown rather than becoming zero.
+        for field in EXTENDED_NUTRIENT_FIELDS:
+            value = nutrients.get(field)
+            if value is None:
+                values[field] = None
+            else:
+                values[field] = snapshot_amount(
+                    value, f"food {fdc_id} nutrient {field}"
+                )
 
         records.append(
             {
                 "fdc_id": fdc_id,
                 "name": normalize_ingredient(description)[0],
+                "retrieved_at": retrieved_at,
                 **values,
             }
         )
@@ -175,7 +204,11 @@ class Command(BaseCommand):
             try:
                 with transaction.atomic():
                     for record in batch:
-                        if upsert_food(record, record["fdc_id"]).created:
+                        if upsert_food(
+                            record,
+                            record["fdc_id"],
+                            retrieved_at=record.get("retrieved_at"),
+                        ).created:
                             batch_created += 1
                         else:
                             batch_updated += 1

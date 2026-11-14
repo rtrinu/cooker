@@ -1,7 +1,35 @@
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+# The five nutrients recipe totals have always used. Keeping aggregation on
+# this tuple means adding a stored nutrient cannot silently change an existing
+# calorie or macro figure.
 NUTRIENT_FIELDS = ("kcal", "protein_g", "carbs_g", "fat_g", "fiber_g")
+# Nutrients stored per ingredient but not yet rolled into recipe panels.
+EXTENDED_NUTRIENT_FIELDS = ("saturated_fat_g", "sugar_g", "sodium_mg")
+INGREDIENT_NUTRIENT_FIELDS = NUTRIENT_FIELDS + EXTENDED_NUTRIENT_FIELDS
+
+VERIFICATION_STATUSES = (
+    ("unverified", "unverified"),
+    ("estimated", "estimated"),
+    ("verified", "verified"),
+)
+
+PROCESSING_STATUSES = (
+    ("pending", "pending"),
+    ("processing", "processing"),
+    ("matched", "matched"),
+    ("needs_review", "needs review"),
+    ("unavailable", "unavailable"),
+    ("failed", "failed"),
+)
+
+MEASUREMENT_SYSTEMS = (
+    ("us", "US customary"),
+    ("metric", "metric"),
+    ("imperial", "imperial"),
+    ("unspecified", "unspecified"),
+)
 
 
 def nonnegative_or_null(field):
@@ -9,10 +37,25 @@ def nonnegative_or_null(field):
     return models.Q(**{f"{field}__isnull": True}) | models.Q(**{f"{field}__gte": 0})
 
 
+def confidence_or_null(field):
+    """Constraint helper: confidence, when present, is a 0..1 score."""
+    return models.Q(**{f"{field}__isnull": True}) | (
+        models.Q(**{f"{field}__gte": 0}) & models.Q(**{f"{field}__lte": 1})
+    )
+
+
 class Ingredient(models.Model):
     name = models.CharField(max_length=255, unique=True)
     aliases = models.JSONField(default=list, blank=True)
     category = models.CharField(max_length=50, blank=True)
+    # State of the automated nutrition lookup for this ingredient. A row with
+    # an explicit nutrition record is ``matched``; a failure stays visible
+    # rather than looking like an ingredient with no data.
+    processing_status = models.CharField(
+        max_length=20, choices=PROCESSING_STATUSES, default="pending", db_index=True
+    )
+    processing_error = models.TextField(blank=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -27,10 +70,30 @@ class IngredientNutrition(models.Model):
     carbs_g = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
     fat_g = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
     fiber_g = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
+    saturated_fat_g = models.FloatField(
+        null=True, blank=True, validators=[MinValueValidator(0)]
+    )
+    sugar_g = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
+    sodium_mg = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
     serving_size_g = models.FloatField(validators=[MinValueValidator(0)])
     source = models.CharField(max_length=200)
     source_id = models.CharField(max_length=200)
     publication_date = models.DateField(null=True, blank=True)
+    # How sure the automated matcher is that this record describes the
+    # ingredient, kept separate from measurement-conversion confidence.
+    confidence = models.FloatField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
+    verification_status = models.CharField(
+        max_length=20, choices=VERIFICATION_STATUSES, default="unverified"
+    )
+    retrieved_at = models.DateTimeField(null=True, blank=True)
+    # Licence terms travel with the record so a commercial deployment can
+    # show attribution and know which obligations apply to each source.
+    license = models.CharField(max_length=100, blank=True)
+    attribution = models.TextField(blank=True)
 
     class Meta:
         constraints = [
@@ -44,7 +107,11 @@ class IngredientNutrition(models.Model):
                 & nonnegative_or_null("protein_g")
                 & nonnegative_or_null("carbs_g")
                 & nonnegative_or_null("fat_g")
-                & nonnegative_or_null("fiber_g"),
+                & nonnegative_or_null("fiber_g")
+                & nonnegative_or_null("saturated_fat_g")
+                & nonnegative_or_null("sugar_g")
+                & nonnegative_or_null("sodium_mg")
+                & (confidence_or_null("confidence")),
                 name="ingredient_nutrition_valid_values",
             ),
         ]
@@ -66,12 +133,25 @@ class IngredientMeasure(models.Model):
     amount = models.FloatField()
     gram_weight = models.FloatField()
     sequence = models.PositiveIntegerField(default=1)
+    measurement_system = models.CharField(
+        max_length=20, choices=MEASUREMENT_SYSTEMS, default="unspecified"
+    )
+    preparation_state = models.CharField(max_length=50, blank=True)
+    conversion_source = models.CharField(max_length=100, blank=True)
+    # Confidence in this gram conversion, separate from nutrition confidence.
+    confidence = models.FloatField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
 
     class Meta:
         ordering = ("ingredient", "sequence")
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(amount__gt=0) & models.Q(gram_weight__gt=0),
+                condition=models.Q(amount__gt=0)
+                & models.Q(gram_weight__gt=0)
+                & (confidence_or_null("confidence")),
                 name="ingredient_measure_valid_values",
             ),
         ]

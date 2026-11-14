@@ -14,14 +14,23 @@ import zipfile
 
 from recipes.management.commands.import_usda import (
     NUTRIENT_FIELDS,
+    SOURCE,
     USDADataError,
     extract_nutrients,
     parse_description,
     parse_publication_date,
     positive_int,
 )
-from recipes.ingredient_cleanup import normalize_ingredient, should_skip_category
-from recipes.units import normalize_measure
+from recipes.ingredient_cleanup import (
+    detect_preparation_state,
+    normalize_ingredient,
+    should_skip_category,
+)
+from recipes.units import (
+    conversion_confidence_for,
+    measurement_system_for,
+    normalize_measure,
+)
 
 SUPPORTED_DATA_TYPES = frozenset({"Foundation", "SR Legacy"})
 DEFAULT_CHUNK_SIZE = 1 << 20
@@ -44,6 +53,7 @@ def parse_portions(food):
     """
     if not isinstance(food, dict):
         raise USDADataError("food entry must be a JSON object")
+    description = str(food.get("description") or "")
     portions = food.get("foodPortions")
     if portions is None:
         return []
@@ -93,6 +103,12 @@ def parse_portions(food):
                 "amount": float(amount),
                 "gram_weight": float(gram_weight),
                 "sequence": sequence,
+                "measurement_system": measurement_system_for(measure),
+                "preparation_state": detect_preparation_state(
+                    f"{description} {label}"
+                ),
+                "conversion_source": f"{SOURCE} foodPortions",
+                "confidence": conversion_confidence_for(measure),
             }
         )
     return records

@@ -16,6 +16,7 @@ from recipes.management.commands.import_usda import (
     parse_food,
     positive_int,
 )
+from recipes.models import INGREDIENT_NUTRIENT_FIELDS
 
 SNAPSHOT_VERSION = 1
 BASIS_AMOUNT = 100
@@ -49,8 +50,7 @@ def snapshot_food(food, parsed):
         "description": parsed["name"],
         "data_type": food.get("dataType") or "Foundation",
         "nutrients": {
-            field: parsed[field]
-            for field in ("kcal", "protein_g", "carbs_g", "fat_g", "fiber_g")
+            field: parsed.get(field) for field in INGREDIENT_NUTRIENT_FIELDS
         },
     }
 

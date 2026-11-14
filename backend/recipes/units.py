@@ -126,6 +126,39 @@ MASS_IN_GRAMS = {
     "mg": 0.001, "g": 1.0, "kg": 1000.0, "oz": 28.3495, "lb": 453.592,
 }
 
+# USDA foodPortions use US customary volume units and metric mass units in the
+# same file. Recording which system a conversion came from matters because a
+# US cup is 236.588 ml while a metric cup is 250 ml.
+US_CUSTOMARY_UNITS = frozenset({
+    "cup", "tbsp", "tsp", "fl oz", "gill", "pint", "quart", "gallon", "oz", "lb",
+})
+METRIC_UNITS = frozenset({"ml", "l", "dl", "cl", "mg", "g", "kg"})
+
+
+def measurement_system_for(measure):
+    """Which measurement system a canonical unit belongs to."""
+    if measure in US_CUSTOMARY_UNITS:
+        return "us"
+    if measure in METRIC_UNITS:
+        return "metric"
+    return "unspecified"
+
+
+def conversion_confidence_for(measure):
+    """Confidence in a USDA portion conversion, by unit kind.
+
+    A mass portion is exact arithmetic. A volume portion relies on the density
+    of that particular food, which USDA measured but which varies between
+    samples. A count portion depends on the size of the item. Keeping these
+    apart from nutrition-match confidence is the point of the field.
+    """
+    if measure in MASS_UNITS:
+        return 1.0
+    if measure in VOLUME_UNITS:
+        return 0.9
+    return 0.8
+
+
 
 def _scaled(measure, amount):
     """Grams that ``amount`` of ``measure`` refers to."""
