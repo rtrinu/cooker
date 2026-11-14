@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
 import { getStats } from '../api/client'
 import { ButtonLink } from '../components/Button'
+import PageHero from '../components/PageHero'
 import { usePageTitle } from '../lib/usePageTitle'
 
 const recipeSources = [
@@ -55,27 +55,11 @@ export default function DataPage() {
     <>
       <section className="bg-heat">
         <div className="shell pb-12 pt-8 md:pb-16 md:pt-10">
-          <nav aria-label="Breadcrumb" className="text-small text-ink/80">
-            <Link
-              to="/"
-              className="inline-flex min-h-11 items-center font-semibold underline decoration-2 underline-offset-4 hover:decoration-4"
-            >
-              Home
-            </Link>
-            <span aria-hidden="true"> / </span>
-            <span>Data &amp; licences</span>
-          </nav>
-
-          <header className="mt-6 max-w-4xl">
-            <h1 className="hero-rise font-display text-poster">
-              Where the food comes from.
-            </h1>
-            <p className="mt-6 max-w-2xl text-lead text-ink/80">
-              Every recipe and every nutrition figure keeps a record of its
-              source. This page says what Cooker uses, what it does not, and
-              what each licence asks of us.
-            </p>
-          </header>
+          <PageHero
+            crumb="Data & licences"
+            title="Where the food comes from."
+            intro="Every recipe and every nutrition figure keeps a record of its source. This page says what Cooker uses, what it does not, and what each licence asks of us."
+          />
 
           <dl className="mt-10 grid grid-cols-2 gap-6 bg-ink p-6 text-field sm:max-w-xl sm:grid-cols-3 md:p-8">
             <div className="flex flex-col-reverse">

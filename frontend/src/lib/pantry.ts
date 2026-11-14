@@ -62,7 +62,7 @@ function singular(token: string) {
   return token
 }
 
-export function pantryTokens(text: string) {
+function pantryTokens(text: string) {
   return new Set(
     (text.toLowerCase().match(/[a-z0-9]+/g) ?? [])
       .map(singular)

@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getFinder } from '../api/client'
 import { Button } from '../components/Button'
 import { EmptyState, ErrorState, LoadingRows } from '../components/DataState'
 import FinderResultCard from '../components/FinderResultCard'
+import PageHero from '../components/PageHero'
 import Pagination from '../components/Pagination'
 import PantryForm from '../components/PantryForm'
 import { usePageTitle } from '../lib/usePageTitle'
@@ -34,26 +35,11 @@ export default function FinderPage() {
     <>
       <section className="bg-heat">
         <div className="shell pb-12 pt-8 md:pb-16 md:pt-10">
-          <nav aria-label="Breadcrumb" className="text-small text-ink/80">
-            <Link
-              to="/"
-              className="inline-flex min-h-11 items-center font-semibold underline decoration-2 underline-offset-4 hover:decoration-4"
-            >
-              Home
-            </Link>
-            <span aria-hidden="true"> / </span>
-            <span>Finder</span>
-          </nav>
-
-          <header className="mt-6 max-w-4xl">
-            <h1 className="hero-rise font-display text-poster">
-              What can you make?
-            </h1>
-            <p className="mt-6 max-w-2xl text-lead text-ink/80">
-              Rank recipes by the ingredients you already have. The list shows
-              what each recipe still needs, and every card carries its calories,
-              protein, fat and fibre.
-            </p>
+          <PageHero
+            crumb="Finder"
+            title="What can you make?"
+            intro="Rank recipes by the ingredients you already have. The list shows what each recipe still needs, and every card carries its calories, protein, fat and fibre."
+          >
             <PantryForm
               key={ingredients}
               initialValue={ingredients}
@@ -76,7 +62,7 @@ export default function FinderPage() {
             >
               Try eggs, flour, butter
             </Button>
-          </header>
+          </PageHero>
         </div>
       </section>
 

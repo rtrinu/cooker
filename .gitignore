@@ -43,6 +43,7 @@ yarn-error.log*
 # Frontend build / test artifacts
 *.tsbuildinfo
 .vite/
+.fallow/
 test-results/
 playwright-report/
 blob-report/

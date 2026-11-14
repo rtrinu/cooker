@@ -1,19 +1,14 @@
 import createClient from 'openapi-fetch'
 import type { components, paths } from './schema'
 
-export const api = createClient<paths>({
+const api = createClient<paths>({
   baseUrl: import.meta.env.VITE_API_ORIGIN ?? '',
 })
 
 export type RecipeList = components['schemas']['RecipeListOut']
-export type RecipeDetail = components['schemas']['RecipeDetailOut']
-export type RecipeIngredient = components['schemas']['RecipeIngredientOut']
 export type Nutrition = components['schemas']['NutritionOut']
-export type FinderResult = components['schemas']['FinderOut']
 export type FinderRecipe = components['schemas']['FinderRecipeOut']
 export type Ingredient = components['schemas']['IngredientOut']
-export type Stats = components['schemas']['StatsOut']
-export type CategoryCount = components['schemas']['CategoryCountOut']
 
 type ApiResult<T> = {
   data?: T

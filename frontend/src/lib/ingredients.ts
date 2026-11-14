@@ -96,7 +96,7 @@ const RULES: Rule[] = [
   },
 ]
 
-export const GROUP_ORDER = [
+const GROUP_ORDER = [
   'Vegetables',
   'Fruit',
   'Dairy & eggs',

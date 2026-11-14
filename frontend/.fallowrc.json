@@ -1,0 +1,57 @@
+{
+  "$schema": "./node_modules/fallow/schema.json",
+
+  // Generated from openapi.json by `npm run api:types`; review the source
+  // schema instead of this file.
+  "ignoreFindings": ["src/api/schema.d.ts"],
+  "health": {
+    "ignore": ["src/api/schema.d.ts"],
+    // Known backlog. Each limit is a ceiling, so further growth still fails.
+    // Remove an override once the page is split into smaller components.
+    "thresholdOverrides": [
+      {
+        "files": ["src/pages/RecipeDetailPage.tsx"],
+        "functions": ["RecipeDetailPage"],
+        "maxCyclomatic": 40,
+        "maxCognitive": 40,
+        "reason": "Legacy page queued for component extraction"
+      },
+      {
+        "files": ["src/pages/RecipesPage.tsx"],
+        "functions": ["RecipesPage"],
+        "maxCyclomatic": 25,
+        "maxCognitive": 25,
+        "reason": "Legacy page queued for component extraction"
+      },
+      {
+        "files": ["src/pages/HomePage.tsx"],
+        "functions": ["HomePage"],
+        "maxCyclomatic": 20,
+        "maxCognitive": 20,
+        "reason": "Legacy page queued for component extraction"
+      },
+      {
+        "files": ["src/components/IngredientPicker.tsx"],
+        "functions": ["IngredientPicker"],
+        "maxCyclomatic": 12,
+        "maxCognitive": 20,
+        "reason": "Legacy component queued for extraction"
+      },
+      {
+        "files": ["src/components/PantryForm.tsx"],
+        "functions": ["PantryForm"],
+        "maxCyclomatic": 10,
+        "maxCognitive": 17,
+        "reason": "Legacy component queued for extraction"
+      }
+    ]
+  },
+  "duplicates": { "ignore": ["src/api/schema.d.ts"] },
+
+  // CRAP is dominated by the lack of unit tests in this project, so it stays
+  // advisory. Cyclomatic and cognitive complexity still fail above the limits.
+  "rules": {
+    "complexity-crap": "warn",
+    "complexity-file-lines": "warn"
+  }
+}

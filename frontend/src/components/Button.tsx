@@ -42,26 +42,3 @@ export function ButtonLink({
     </Link>
   )
 }
-
-export function ButtonAnchor({
-  href,
-  tone = 'ink',
-  className = '',
-  children,
-}: {
-  href: string
-  tone?: ButtonTone
-  className?: string
-  children: ReactNode
-}) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className={classes(tone, className)}
-    >
-      {children}
-    </a>
-  )
-}
