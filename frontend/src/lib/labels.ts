@@ -4,14 +4,26 @@ const LABELS: Record<string, string> = {
   modern: 'Modern',
 }
 
-const INGREDIENT_LABELS: Record<string, string> = {
-  'American Indian/Alaska Native Foods': 'Indigenous foods',
+const LICENSES: Record<string, string> = {
+  'public-domain': 'Public domain',
 }
 
 export function taxonomyLabel(value: string) {
-  return LABELS[value] ?? value.replaceAll('-', ' ')
+  const known = LABELS[value]
+  if (known) {
+    return known
+  }
+
+  // Values arrive as slugs ("east-asian") but the stored data is not always
+  // normalised ("middle eastern"), so normalise before title-casing.
+  return value
+    .replaceAll('_', ' ')
+    .replaceAll('-', ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
-export function ingredientCategoryLabel(value: string) {
-  return INGREDIENT_LABELS[value] ?? value
+export function licenseLabel(value: string) {
+  return LICENSES[value] ?? value
 }

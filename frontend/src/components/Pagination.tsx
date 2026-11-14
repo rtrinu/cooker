@@ -11,6 +11,9 @@ function pageWindow(page: number, totalPages: number): number[] {
   return Array.from({ length: end - start + 1 }, (_, index) => start + index)
 }
 
+const navButton =
+  'min-h-11 bg-ink px-4 text-small font-semibold text-heat transition-colors hover:bg-heat hover:text-ink disabled:cursor-not-allowed disabled:bg-ink/10 disabled:text-ink/60'
+
 export default function Pagination({
   page,
   count,
@@ -33,7 +36,7 @@ export default function Pagination({
         type="button"
         onClick={() => onPageChange(page - 1)}
         disabled={page <= 1}
-        className="min-h-11 bg-ink px-4 text-sm font-semibold text-heat transition-colors hover:bg-field hover:text-ink disabled:cursor-not-allowed disabled:bg-ink/10 disabled:text-ink/40"
+        className={navButton}
       >
         Previous
       </button>
@@ -43,7 +46,7 @@ export default function Pagination({
           type="button"
           onClick={() => onPageChange(number)}
           aria-current={number === page ? 'page' : undefined}
-          className={`min-h-11 min-w-11 px-3 text-sm font-semibold transition-colors ${
+          className={`min-h-11 min-w-11 px-3 text-small font-semibold transition-colors ${
             number === page
               ? 'bg-ink text-heat'
               : 'bg-ink/10 text-ink hover:bg-ink hover:text-heat'
@@ -56,11 +59,11 @@ export default function Pagination({
         type="button"
         onClick={() => onPageChange(page + 1)}
         disabled={page >= totalPages}
-        className="min-h-11 bg-ink px-4 text-sm font-semibold text-heat transition-colors hover:bg-field hover:text-ink disabled:cursor-not-allowed disabled:bg-ink/10 disabled:text-ink/40"
+        className={navButton}
       >
         Next
       </button>
-      <span className="ml-auto text-sm text-muted-field">
+      <span className="ml-auto text-small text-muted-field">
         Page {page} of {totalPages}
       </span>
     </nav>

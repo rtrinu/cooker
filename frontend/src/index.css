@@ -2,20 +2,29 @@
 
 @theme {
   --color-heat: #ff7a1f;
-  --color-ember: #ff8633;
   --color-ink: #050f16;
   --color-field: #ffffff;
-  --color-muted: #5a2306;
   --color-muted-field: #565650;
 
   --font-display: "Anton", "Arial Narrow", Impact, sans-serif;
   --font-sans: "Work Sans Variable", system-ui, -apple-system, sans-serif;
 
   --text-small: 0.875rem;
+  --text-small--line-height: 1.45;
   --text-body: 1.0625rem;
-  --text-lead: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
-  --text-head: clamp(2.75rem, 1.2rem + 5vw, 5.5rem);
-  --text-poster: clamp(3.25rem, 10vw, 9rem);
+  --text-body--line-height: 1.55;
+  --text-lead: clamp(1.25rem, 1.08rem + 0.55vw, 1.5rem);
+  --text-lead--line-height: 1.35;
+  --text-title: clamp(1.75rem, 1.2rem + 2.2vw, 3rem);
+  --text-title--line-height: 0.98;
+  --text-head: clamp(2.5rem, 1.4rem + 4.2vw, 4.75rem);
+  --text-head--line-height: 0.94;
+  --text-poster: clamp(3.25rem, 1.3rem + 9.5vw, 9rem);
+  --text-poster--line-height: 0.86;
+  --text-stat: clamp(2.25rem, 1.3rem + 3.6vw, 3.75rem);
+  --text-stat--line-height: 0.9;
+  --text-mega: clamp(6rem, 22vw, 18rem);
+  --text-mega--line-height: 0.74;
 }
 
 @layer base {
@@ -23,14 +32,14 @@
     background-color: var(--color-heat);
     color: var(--color-ink);
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
     margin: 0;
-    overflow-x: clip;
     font-family: var(--font-sans);
     font-size: var(--text-body);
-    line-height: 1.5;
+    line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -60,14 +69,118 @@
     font: inherit;
   }
 
+  p {
+    text-wrap: pretty;
+  }
+
   .font-display {
     text-transform: uppercase;
-    letter-spacing: -0.01em;
-    line-height: 0.9;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
   }
 
   input::placeholder {
     opacity: 1;
+  }
+}
+
+@layer components {
+  .shell {
+    width: 100%;
+    margin-inline: auto;
+    max-width: 1440px;
+    padding-inline: 1.25rem;
+  }
+
+  .section {
+    padding-block: clamp(4.5rem, 9vw, 8rem);
+  }
+
+  .section-sm {
+    padding-block: clamp(2.75rem, 5vw, 4.5rem);
+  }
+
+  .wordmark {
+    font-size: 30vw;
+    line-height: 0.74;
+    letter-spacing: -0.02em;
+  }
+
+  .range-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    pointer-events: none;
+  }
+
+  .range-input::-webkit-slider-runnable-track {
+    height: 0.25rem;
+    background: transparent;
+  }
+
+  .range-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-top: -0.625rem;
+    border: 3px solid var(--color-ink);
+    border-radius: 0;
+    background: var(--color-heat);
+    cursor: grab;
+    pointer-events: auto;
+  }
+
+  .range-input::-moz-range-track {
+    height: 0.25rem;
+    background: transparent;
+  }
+
+  .range-input::-moz-range-thumb {
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 3px solid var(--color-ink);
+    border-radius: 0;
+    background: var(--color-heat);
+    cursor: grab;
+    pointer-events: auto;
+  }
+
+  .range-input:active::-webkit-slider-thumb {
+    cursor: grabbing;
+  }
+
+  .range-input:active::-moz-range-thumb {
+    cursor: grabbing;
+  }
+
+  .range-input:focus-visible {
+    outline: none;
+  }
+
+  .range-input:focus-visible::-webkit-slider-thumb {
+    outline: 3px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+
+  .range-input:focus-visible::-moz-range-thumb {
+    outline: 3px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+
+  @media (min-width: 768px) {
+    .shell {
+      padding-inline: 2.5rem;
+    }
+
+    .wordmark {
+      font-size: 26vw;
+    }
   }
 }
 
@@ -80,20 +193,25 @@
   }
 }
 
+.pantry-viewport {
+  overflow: hidden;
+}
+
 .pantry-track {
   width: max-content;
   animation: pantry-scroll 55s linear infinite;
 }
 
 .pantry-track:hover,
-.pantry-track:focus-within {
+.pantry-track:focus-within,
+.pantry-track[data-paused="true"] {
   animation-play-state: paused;
 }
 
 @keyframes hero-rise {
   from {
     opacity: 0;
-    transform: translateY(24px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -102,7 +220,34 @@
 }
 
 .hero-rise {
-  animation: hero-rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: hero-rise 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.page-in {
+  animation: page-in 180ms ease-out both;
+}
+
+@keyframes meter-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.meter-fill {
+  transform-origin: left;
+  animation: meter-fill 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -110,8 +255,21 @@
     scroll-behavior: auto;
   }
 
-  .pantry-track,
-  .hero-rise {
+  .hero-rise,
+  .page-in,
+  .meter-fill {
     animation: none;
+  }
+
+  .pantry-viewport {
+    overflow-x: auto;
+  }
+
+  .pantry-track {
+    animation: none;
+  }
+
+  .pantry-track > [data-dup="true"] {
+    display: none;
   }
 }

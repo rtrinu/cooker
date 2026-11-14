@@ -9,16 +9,16 @@ export function LoadingRows({
   rows?: number
 }) {
   return (
-    <div
-      role="status"
-      aria-label={`${label} (${rows} rows)`}
-      className="flex items-center gap-4 py-16"
-    >
-      <span
-        aria-hidden="true"
-        className="h-4 w-4 animate-pulse bg-ink motion-reduce:animate-none"
-      />
-      <p className="font-display text-head">{label}</p>
+    <div role="status" aria-live="polite" className="py-3">
+      <span className="sr-only">{label}</span>
+      <div aria-hidden="true" className="space-y-1">
+        {Array.from({ length: rows }, (_, index) => (
+          <div key={index} className="flex items-center gap-6 px-4 py-5">
+            <span className="h-6 w-2/3 bg-ink/10 motion-safe:animate-pulse" />
+            <span className="ml-auto h-4 w-16 bg-ink/10 motion-safe:animate-pulse" />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -51,7 +51,7 @@ export function EmptyState({
   title?: string
 }) {
   return (
-    <div className="bg-ember px-6 py-10 md:px-10">
+    <div className="bg-heat px-6 py-10 md:px-10">
       <p className="font-display text-head">{title}</p>
       <p className="mt-3 max-w-xl text-body text-ink/80">{children}</p>
     </div>

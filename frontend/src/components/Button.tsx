@@ -4,10 +4,11 @@ import { Link } from 'react-router-dom'
 export type ButtonTone = 'ink' | 'heat'
 
 const base =
-  'inline-flex min-h-12 cursor-pointer items-center justify-center px-6 py-3 text-sm font-semibold leading-none transition-colors disabled:cursor-not-allowed disabled:opacity-40'
+  'inline-flex min-h-12 cursor-pointer items-center justify-center px-6 py-3 text-small font-semibold leading-none transition-[background-color,color,box-shadow] duration-150 disabled:cursor-not-allowed disabled:opacity-40'
 
 const tones: Record<ButtonTone, string> = {
-  ink: 'bg-ink text-heat hover:bg-field hover:text-ink',
+  // Keeps its edge on every surface: the inset ring stops the fill vanishing on white.
+  ink: 'bg-ink text-heat hover:bg-field hover:text-ink hover:shadow-[inset_0_0_0_2px_var(--color-ink)]',
   heat: 'bg-heat text-ink hover:bg-field hover:text-ink',
 }
 
