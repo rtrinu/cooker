@@ -15,11 +15,13 @@ import re
 MEASURE_SYNONYMS = {
     # volume
     "cup": "cup", "cups": "cup", "c": "cup", "cupful": "cup", "cupfuls": "cup",
-    "tbsp": "tbsp", "tbs": "tbsp", "tbl": "tbsp", "tblsp": "tbsp",
-    "tablespoon": "tbsp", "tablespoons": "tbsp",
+    "tbsp": "tbsp", "tbs": "tbsp", "tb": "tbsp", "tbl": "tbsp",
+    "tblsp": "tbsp", "tablespoon": "tbsp", "tablespoons": "tbsp",
     "tablespoonful": "tbsp", "tablespoonfuls": "tbsp",
-    "tsp": "tsp", "tspn": "tsp", "teaspoon": "tsp", "teaspoons": "tsp",
-    "teaspoonful": "tsp", "teaspoonfuls": "tsp",
+    "spoon": "tbsp", "spoons": "tbsp", "spoonful": "tbsp",
+    "spoonfuls": "tbsp", "spoonsful": "tbsp",
+    "tsp": "tsp", "t": "tsp", "tspn": "tsp", "teaspoon": "tsp",
+    "teaspoons": "tsp", "teaspoonful": "tsp", "teaspoonfuls": "tsp",
     "pint": "pint", "pints": "pint",
     "quart": "quart", "quarts": "quart", "qt": "quart",
     "gallon": "gallon", "gallons": "gallon",
@@ -27,6 +29,10 @@ MEASURE_SYNONYMS = {
     "fl oz": "fl oz", "fluid ounce": "fl oz", "fluid ounces": "fl oz",
     "ml": "ml", "milliliter": "ml", "milliliters": "ml",
     "l": "l", "liter": "l", "liters": "l", "litre": "l", "litres": "l",
+    "dl": "dl", "deciliter": "dl", "deciliters": "dl",
+    "decilitre": "dl", "decilitres": "dl",
+    "cl": "cl", "centiliter": "cl", "centiliters": "cl",
+    "centilitre": "cl", "centilitres": "cl",
     # mass
     "oz": "oz", "ounce": "oz", "ounces": "oz",
     "lb": "lb", "lbs": "lb", "pound": "lb", "pounds": "lb",
@@ -118,7 +124,7 @@ MASS_UNITS = frozenset({"mg", "g", "kg", "oz", "lb"})
 # dataset: same dimension, standard sizes. A volume never turns into a mass
 # through these tables.
 VOLUME_IN_ML = {
-    "ml": 1.0, "l": 1000.0, "fl oz": 29.5735,
+    "ml": 1.0, "l": 1000.0, "dl": 100.0, "cl": 10.0, "fl oz": 29.5735,
     "tsp": 4.92892, "tbsp": 14.7868, "cup": 236.588, "gill": 118.294,
     "pint": 473.176, "quart": 946.353, "gallon": 3785.41,
 }
@@ -203,7 +209,7 @@ QUANTITY = re.compile(
  (?:
       (?P<integer>\d+)\s+(?P<mixed>\d+)\s*/\s*(?P<mixed_den>\d+)
     | (?P<numerator>\d+)\s*/\s*(?P<denominator>\d+)
-    | (?P<decimal>\d+(?:\.\d+)?)
+    | (?P<decimal>\d+(?:\.\d+)?|\.\d+)
     )
     """,
     re.VERBOSE,
@@ -249,7 +255,23 @@ def parse_amount(text):
     unit = None
     word = UNIT_WORD.match(rest)
     if word:
-        canonical = MEASURE_SYNONYMS.get(word.group(1).lower())
+        token = word.group(1)
+        following = UNIT_WORD.match(rest[word.end():])
+        # A lone capital between the number and a real measure is a garbled
+        # fraction glyph from a PDF, not a unit: "2 L cups" means two and a
+        # fraction cups, and reading L as litres would multiply the amount
+        # eightfold. The integer part is kept, which is a lower bound because
+        # the missing glyph is a fraction between zero and one.
+        if (
+            len(token) == 1
+            and token.isupper()
+            and following
+            and MEASURE_SYNONYMS.get(following.group(1).lower())
+        ):
+            rest = rest[word.end():]
+            word = following
+            token = word.group(1)
+        canonical = MEASURE_SYNONYMS.get(token.lower())
         if canonical:
             unit = canonical
             rest = rest[word.end():]

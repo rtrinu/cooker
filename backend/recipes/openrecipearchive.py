@@ -19,6 +19,11 @@ import hashlib
 import re
 from collections import namedtuple
 
+from .ingredient_cleanup import (
+    GRADE_HEAD,
+    canonical_ingredient_name,
+    is_equipment,
+)
 from .models import Ingredient, RecipeIngredient
 from .units import MEASURE_SYNONYMS, UNICODE_FRACTIONS, parse_amount
 
@@ -99,6 +104,13 @@ EXTRA_UNIT_ALIASES = {
     "table-spoon": "tbsp", "table-spoons": "tbsp",
     "table-spoonful": "tbsp", "table-spoonfuls": "tbsp",
     "tablespoonful": "tbsp", "tablespoonfuls": "tbsp",
+    "tb": "tbsp", "tbl": "tbsp", "tspn": "tsp",
+    "teacup": "cup", "teacups": "cup",
+    "teacupful": "cup", "teacupfuls": "cup",
+    "coffee cup": "cup", "coffee cups": "cup",
+    "coffee-cup": "cup", "coffee-cups": "cup",
+    "coffee cupful": "cup", "coffee cupfuls": "cup",
+    "coffee-cupful": "cup", "coffee-cupfuls": "cup",
     "tea spoon": "tsp", "tea spoons": "tsp",
     "tea spoonful": "tsp", "tea spoonfuls": "tsp",
     "tea-spoon": "tsp", "tea-spoons": "tsp",
@@ -123,12 +135,98 @@ FOOD_COUNT_UNITS = frozenset({
 _UNIT_PHRASES = sorted(UNIT_ALIASES, key=len, reverse=True)
 UNIT_HEAD = re.compile(
     r"^(?P<unit>" + "|".join(re.escape(phrase) for phrase in _UNIT_PHRASES) + r")"
-    r"\.?(?=[\s,;]|$)",
+    r"\.?(?=[\s,;/]|$)",
     re.I,
 )
 SINGLE_LETTER_UNIT = re.compile(r"^(?P<unit>[TtCc])\.(?=[\s,;]|$)")
 
-AMOUNT_HEAD = re.compile(r"^\s*(?:\d+\s+\d+/\d+|\d+/\d+|\d+(?:\.\d+)?)")
+AMOUNT_HEAD = re.compile(r"^\s*(?:\d+\s+\d+/\d+|\d+/\d+|\d+(?:\.\d+)?|\.\d+)")
+NUMERIC_AMOUNT = r"(?:\d+\s+\d+/\d+|\d+/\d+|\d+(?:\.\d+)?|\.\d+)"
+RANGE_HEAD = re.compile(
+    r"^(?P<low>" + NUMERIC_AMOUNT + r")\s*(?:[-\u2013\u2014]|or)\s*"
+    r"(?P<high>" + NUMERIC_AMOUNT + r")\s*"
+    r"(?P<unit>" + "|".join(re.escape(phrase) for phrase in _UNIT_PHRASES) + r")?"
+    r"\.?\s+(?:of\s+)?(?P<name>.+)$",
+    re.I,
+)
+APPROXIMATION = re.compile(
+    r"^(?:up to|less than|about|around|approximately|approx\.?|nearly|"
+    r"roughly|almost|<)\s*",
+    re.I,
+)
+WORD_RANGE = re.compile(
+    r"^(?P<low>one|two|three|four|five|six|seven|eight|nine|ten|eleven|"
+    r"twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|"
+    r"twenty)\s+(?:to|or)\s+"
+    r"(?P<high>one|two|three|four|five|six|seven|eight|nine|ten|eleven|"
+    r"twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|"
+    r"twenty)\b",
+    re.I,
+)
+# "50-70% dark chocolate" and "4% sea salt" describe the product, not an
+# amount to cook with; the leading number must stay in the name.
+PERCENT_HEAD = re.compile(
+    r"^\d+(?:\.\d+)?(?:\s*[-\u2013\u2014]\s*\d+(?:\.\d+)?)?\s*%"
+)
+TRAILING_AMOUNT = re.compile(
+    r"^(?P<name>.+?)\s*(?:(?:,|;)\s*|\s+[-\u2013\u2014]\s+|\s+)"
+    r"~?\s*(?P<amount>" + NUMERIC_AMOUNT + r")\s*"
+    r"(?P<unit>" + "|".join(re.escape(phrase) for phrase in _UNIT_PHRASES) + r")\b"
+    r"(?:\s*\([^)]*\))?(?:\s*[,;].*)?$",
+    re.I,
+)
+TRAILING_ALTERNATIVE = re.compile(
+    r"^(?P<name>.+?)\s*(?:(?:,|;)\s*|\s+[-\u2013\u2014]\s+|\s+)"
+    r"(?P<amount>" + NUMERIC_AMOUNT + r")\s*"
+    r"(?P<unit1>" + "|".join(re.escape(phrase) for phrase in _UNIT_PHRASES) + r")"
+    r"\s*/\s*"
+    r"(?P<unit2>" + "|".join(re.escape(phrase) for phrase in _UNIT_PHRASES) + r")"
+    r"\.?\s*$",
+    re.I,
+)
+# A measure inside an alternative name ("ketchup or 3 Tbsp tomato sauce") is
+# not part of the ingredient name when the line already stated its amount.
+EMBEDDED_AMOUNT = (
+    r"(?:\d+(?:\.\d+)?\s+\d+/\d+|\d+(?:\.\d+)?/\d+|\d+/\d+|\d+(?:\.\d+)?)"
+)
+EMBEDDED_ALTERNATIVE = re.compile(
+    r"\s+(?P<join>or|\+)\s+" + EMBEDDED_AMOUNT + r"\s*"
+    r"(?:" + "|".join(re.escape(phrase) for phrase in _UNIT_PHRASES) + r")\b"
+    r"\s*(?:of\s+)?",
+    re.I,
+)
+# "2 heaped tbsp", "1/2 metric cup": a qualifier belongs to the measure.
+QUALIFIED_UNIT = re.compile(
+    r"^(?P<qualifier>heaped|heaping|overfilled|generous|level|rounded|scant|"
+    r"packed|metric)"
+    r"\s+(?P<unit>" + "|".join(re.escape(phrase) for phrase in _UNIT_PHRASES) + r")\b",
+    re.I,
+)
+CONTAINER = re.compile(
+    r"^(?:(?:large|small|medium|big)\s+)?"
+    r"(?P<container>cans?|jars?|packs?|packages?|bottles?|tins?|boxes?|packets?)"
+    r"\b(?:\s+of\s+)?",
+    re.I,
+)
+ALTERNATIVE = re.compile(r"^\s*(?:/|\||or)\s*", re.I)
+LEADING_UNIT_OF = re.compile(
+    r"^(?:(?:heaped|heaping|overfilled|generous|level|rounded|scant|packed|"
+    r"metric)\s+)?"
+    r"(?P<unit>" + "|".join(re.escape(phrase) for phrase in _UNIT_PHRASES) + r")"
+    r"\.?\s+of\s+(?P<name>.+)$",
+    re.I,
+)
+LEADING_QUALIFIED_UNIT = re.compile(
+    r"^(?P<qualifier>heaped|heaping|overfilled|generous|level|rounded|scant|"
+    r"packed)\s+"
+    r"(?P<unit>" + "|".join(re.escape(phrase) for phrase in _UNIT_PHRASES) + r")"
+    r"\.?\s+(?P<name>.+)$",
+    re.I,
+)
+NUMERIC_MIXED = re.compile(
+    r"^(?P<whole>\d+)\s+and\s+(?P<frac>\d+/\d+)\b",
+    re.I,
+)
 LEADING_TENS = re.compile(
     r"^(?P<num>(?:twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)"
     r"(?:[-\s](?:one|two|three|four|five|six|seven|eight|nine))?)\b",
@@ -177,14 +275,18 @@ MIXED_NUMBER = re.compile(
     r"one[-\s]?third|third|two[-\s]?thirds?|three[-\s]?quarters?)\b",
     re.I,
 )
+# "a pint and a half" puts the fraction after the unit. The "and" is required:
+# without it, an ingredient whose name merely starts with "half" (as in
+# "half and half") would be eaten as a fraction and its amount inflated.
 TRAILING_HALF = re.compile(
-    r"^\s*(?:and\s+)?(?:a\s+)?(?:one[-\s])?half\b",
+    r"^\s*and\s+(?:a\s+)?(?:one[-\s])?half\b",
     re.I,
 )
 PARENTHETICAL_ONLY = re.compile(r"^\([^)]*\)\s*$")
 
 
 def _expand_fractions(text):
+    text = text.replace("\u2044", "/")
     for glyph, replacement in UNICODE_FRACTIONS.items():
         text = text.replace(glyph, replacement)
     return text
@@ -208,6 +310,12 @@ def _replace_compound_fraction(text):
 
 
 def _replace_mixed_number(text):
+    match = NUMERIC_MIXED.match(text)
+    if match:
+        return (
+            f"{match.group('whole')} {match.group('frac')}"
+            + text[match.end():]
+        )
     match = MIXED_NUMBER.match(text)
     if not match:
         return text
@@ -288,10 +396,23 @@ def _format_amount(amount):
     return f"{amount:g}"
 
 
+def _replace_word_range(text):
+    """Rewrite a word range ("three to four turnips") as numbers."""
+    match = WORD_RANGE.match(text)
+    if not match:
+        return text
+    low = _word_number(match.group("low"))
+    high = _word_number(match.group("high"))
+    if low is None or high is None:
+        return text
+    return f"{low}-{high}" + text[match.end():]
+
+
 def _clean_name(name):
     text = " ".join(str(name or "").split())
     text = re.sub(r"^[\s,;:.]+", "", text)
     text = re.sub(r"[\s,;:.]+$", "", text)
+    text = re.sub(r"^(?:\([^)]*\)\s*)+", "", text)
     text = re.sub(r"^(?:of|the)\s+", "", text, flags=re.I)
     text = re.sub(r"^(?:a|an)\s+", "", text, flags=re.I)
     text = re.sub(
@@ -301,11 +422,15 @@ def _clean_name(name):
         flags=re.I,
     )
     text = re.sub(
-        r"\s+(?:to taste|as needed|for garnish|for serving|optional)\s*$",
+        r"\s+(?:to taste|to your taste|as needed|for garnish|for serving|"
+        r"if desired|optional)\s*$",
         "",
         text,
         flags=re.I,
     )
+    text = canonical_ingredient_name(text)
+    if is_equipment(text):
+        return ""
     return text[:NAME_MAX_LENGTH].strip()
 
 
@@ -319,22 +444,228 @@ def _quantity_text(amount, unit):
     return text[:QUANTITY_MAX_LENGTH]
 
 
+def _strip_approximation(text):
+    """Drop "about"/"nearly" when a real amount follows, keeping the number."""
+    match = APPROXIMATION.match(text)
+    if not match:
+        return text
+    rest = text[match.end():]
+    if (
+        AMOUNT_HEAD.match(rest)
+        or LEADING_TENS.match(rest)
+        or LEADING_WORD_NUMBER.match(rest)
+    ):
+        return rest
+    return text
+
+
+def _range_quantity(low, high, unit):
+    return " ".join(
+        part for part in (f"{low}-{high}", (unit or "").casefold()) if part
+    )
+
+
+def _parse_range(text):
+    """Parse ``1/4-1/2 cup`` style ranges, preserving both bounds."""
+    match = RANGE_HEAD.match(text)
+    if not match:
+        return None
+    unit = UNIT_ALIASES.get((match.group("unit") or "").casefold(), match.group("unit") or "")
+    name = _clean_name(match.group("name"))
+    if not name:
+        return None
+    quantity = _range_quantity(
+        match.group("low"), match.group("high"), unit
+    )
+    return quantity[:QUANTITY_MAX_LENGTH], name
+
+
+def _parse_compound(text):
+    """Parse lines that state two amounts, such as ``1 cup + 2 tbsp``."""
+    amount, unit, rest = parse_amount(text)
+    if amount is None or not unit:
+        return None
+    rest = rest.lstrip()
+    if not rest.startswith("+"):
+        return None
+    second_text = _canonicalise_head_unit(rest[1:].lstrip())
+    second_amount, second_unit, second_rest = parse_amount(second_text)
+    if second_amount is None or not second_unit:
+        return None
+    name = _clean_name(second_rest)
+    if not name:
+        return None
+    quantity = (
+        f"{_quantity_text(amount, unit)} + "
+        f"{_quantity_text(second_amount, second_unit)}"
+    )
+    return quantity[:QUANTITY_MAX_LENGTH], name
+
+
+def _parse_trailing_amount(text):
+    """Move a measure written at the end of the line into the quantity.
+
+    Modern recipe sites often put the amount after the ingredient
+    (``All-purpose flour 3 cups``), sometimes after a dash
+    (``Salt - 1 1/2 teaspoons``). Only a recognised measure is moved, so a
+    name that merely ends in a number is left alone.
+    """
+    match = TRAILING_AMOUNT.match(text)
+    if not match:
+        alternative = TRAILING_ALTERNATIVE.match(text)
+        if not alternative:
+            return None
+        unit = UNIT_ALIASES.get(alternative.group("unit1").casefold())
+        second_unit = UNIT_ALIASES.get(alternative.group("unit2").casefold())
+        if not unit or not second_unit:
+            return None
+        amount, _, _ = parse_amount(
+            f"{alternative.group('amount')} {unit}"
+        )
+        if amount is None:
+            return None
+        name = _clean_name(alternative.group("name"))
+        if not name:
+            return None
+        quantity = (
+            f"{_quantity_text(amount, unit)} / "
+            f"{_quantity_text(amount, second_unit)}"
+        )
+        return quantity[:QUANTITY_MAX_LENGTH], name
+    unit = UNIT_ALIASES.get(match.group("unit").casefold())
+    if not unit:
+        return None
+    amount, _, _ = parse_amount(f"{match.group('amount')} {unit}")
+    if amount is None:
+        return None
+    name = _clean_name(match.group("name"))
+    if not name:
+        return None
+    return _quantity_text(amount, unit), name
+
+
+def _container_rest(rest):
+    """Split a leading container word (``can``, ``jars of``) off the name."""
+    text = rest.lstrip()
+    match = CONTAINER.match(text)
+    if not match:
+        return "", text
+    return match.group("container").casefold(), text[match.end():]
+
+
+def _parse_package_count(amount, rest):
+    """Parse ``1 15 oz can tomatoes`` as a count plus a package size."""
+    second_text = _canonicalise_head_unit(rest.lstrip())
+    second_amount, second_unit, second_rest = parse_amount(second_text)
+    if second_amount is None or not second_unit:
+        return None
+    container, after = _container_rest(second_rest)
+    name = _clean_name(after)
+    if not name:
+        return None
+    quantity = (
+        f"{_format_amount(amount)} {_quantity_text(second_amount, second_unit)}"
+    )
+    if container:
+        quantity = f"{quantity} {container}"
+    return quantity[:QUANTITY_MAX_LENGTH], name
+
+
+def _parse_qualified_unit(amount, rest):
+    """Parse a measure with a qualifier, such as ``2 heaped tbsp``."""
+    text = rest.lstrip()
+    match = QUALIFIED_UNIT.match(text)
+    if not match:
+        return None
+    qualifier = match.group("qualifier").casefold()
+    unit_text = text[match.start("unit"):]
+    second_amount, unit, second_rest = parse_amount(
+        f"{_format_amount(amount)} {unit_text}"
+    )
+    if second_amount is None or not unit:
+        return None
+    container, after = _container_rest(second_rest)
+    name = _clean_name(after)
+    if not name:
+        return None
+    quantity = f"{_format_amount(amount)} {qualifier} {unit}"
+    if container:
+        quantity = f"{quantity} {container}"
+    return quantity[:QUANTITY_MAX_LENGTH], name
+
+
+def _parse_alternative(amount, unit, rest):
+    """Parse dual measures, such as ``100 g / 1/2 cup`` or ``600 g or 5 cups``."""
+    match = ALTERNATIVE.match(rest)
+    if not match:
+        return None
+    second_text = _canonicalise_head_unit(rest[match.end():].lstrip("~≈ "))
+    second_amount, second_unit, second_rest = parse_amount(second_text)
+    if second_amount is None and second_unit is None:
+        # "1 clove/teaspoon garlic" states the second measure without a number.
+        second_amount, second_unit, second_rest = parse_amount(
+            f"1 {second_text}"
+        )
+    if second_amount is None or not second_unit:
+        return None
+    container, after = _container_rest(second_rest)
+    name = _clean_name(after)
+    if not name:
+        return None
+    quantity = (
+        f"{_quantity_text(amount, unit)} / "
+        f"{_quantity_text(second_amount, second_unit)}"
+    )
+    if container:
+        quantity = f"{quantity} {container}"
+    return quantity[:QUANTITY_MAX_LENGTH], name
+
+
 def parse_ingredient(line):
     """Return ``(quantity_text, name, raw_text)`` for one ingredient line."""
     raw = LIST_MARKER.sub("", " ".join(str(line or "").split())).strip()
     if not raw:
         return None
-    text = _expand_fractions(raw)
+    text = _strip_approximation(_expand_fractions(raw).strip())
     text = _replace_compound_fraction(text)
     text = _replace_mixed_number(text)
     text = _replace_leading_fraction(text)
+    text = _replace_word_range(text)
     text = _replace_leading_number(text)
     if LEADING_UNIT_HALF.match(text):
         text = f"1 {text}"
     text = _canonicalise_head_unit(text)
 
+    if PERCENT_HEAD.match(text) or GRADE_HEAD.match(text):
+        name = _clean_name(text)
+        return ("", name, raw) if name else None
+
+    ranged = _parse_range(text)
+    if ranged:
+        quantity, name = ranged
+        return quantity, name, raw
+
+    compound = _parse_compound(text)
+    if compound:
+        quantity, name = compound
+        return quantity, name, raw
+
     amount, unit, rest = parse_amount(text)
     if amount is not None:
+        if unit is None:
+            packaged = _parse_package_count(amount, rest)
+            if packaged:
+                quantity, name = packaged
+                return quantity, name, raw
+            qualified = _parse_qualified_unit(amount, rest)
+            if qualified:
+                quantity, name = qualified
+                return quantity, name, raw
+        else:
+            alternative = _parse_alternative(amount, unit, rest)
+            if alternative:
+                quantity, name = alternative
+                return quantity, name, raw
         # A parenthetical pack size in front of the real unit is common in old
         # lines ("1 (14-ounce) can tomatoes"); look past it once.
         if unit is None and rest.startswith("("):
@@ -358,6 +689,7 @@ def parse_ingredient(line):
             # ``parse_amount`` reports "large" as a unit; keep that behaviour,
             # but do not let a dangling article become the name.
             rest = re.sub(r"^(?:of|the)\s+", "", rest, flags=re.I)
+        container, rest = _container_rest(rest)
         if PARENTHETICAL_ONLY.match(rest.strip()) and unit in FOOD_COUNT_UNITS:
             return _quantity_text(amount, None), unit, raw
         name = _clean_name(rest)
@@ -365,11 +697,36 @@ def parse_ingredient(line):
             if unit in FOOD_COUNT_UNITS:
                 return _quantity_text(amount, None), unit, raw
             return None
-        return _quantity_text(amount, unit), name, raw
+        quantity = _quantity_text(amount, unit)
+        if container:
+            quantity = f"{quantity} {container}"
+        return quantity[:QUANTITY_MAX_LENGTH], name, raw
 
     name = _clean_name(text)
     if not name:
         return None
+    leading_unit = LEADING_UNIT_OF.match(text)
+    if leading_unit:
+        unit = UNIT_ALIASES.get(leading_unit.group("unit").casefold())
+        unit_name = _clean_name(leading_unit.group("name"))
+        if unit and unit_name:
+            return _quantity_text(1, unit), unit_name, raw
+    qualified_unit = LEADING_QUALIFIED_UNIT.match(text)
+    if qualified_unit:
+        unit = UNIT_ALIASES.get(qualified_unit.group("unit").casefold())
+        unit_name = _clean_name(qualified_unit.group("name"))
+        if unit and unit_name:
+            return (
+                _quantity_text(
+                    1, f"{qualified_unit.group('qualifier').casefold()} {unit}"
+                ),
+                unit_name,
+                raw,
+            )
+    trailing = _parse_trailing_amount(text)
+    if trailing:
+        quantity, trailing_name = trailing
+        return quantity, trailing_name, raw
     return "", name, raw
 
 

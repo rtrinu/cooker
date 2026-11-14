@@ -20,6 +20,7 @@ from pathlib import Path
 
 from .cuisines import cuisine_for_tags, normalize_tags
 from .directions import clean_directions
+from .ingredient_cleanup import canonical_ingredient_name, is_equipment
 from .models import Ingredient, RecipeIngredient
 from .openrecipearchive import parse_ingredient
 
@@ -61,12 +62,17 @@ IMAGE = re.compile(r"!\[[^\]]*\]\([^)]*\)")
 STRONG = re.compile(r"\*\*(.+?)\*\*")
 EMPHASIS = re.compile(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)")
 HTML_TAG = re.compile(r"<[^>]+>")
-OPTIONAL_SUFFIX = re.compile(r"\s*\(?(?:optional|as needed|to taste)\)?\s*$", re.I)
-OPTIONAL_PAREN = re.compile(
-    r"\([^()]*\b(?:optional|to taste|as needed|or more|or less|to serve|"
-    r"for serving|if you can)\b[^()]*\)",
+OPTIONAL_SUFFIX = re.compile(
+    r"\s*\(?(?:optional|as needed|to taste|to your taste|if desired|"
+    r"if you like|or more|or less)\)?\s*$",
     re.I,
 )
+OPTIONAL_PAREN = re.compile(
+    r"\([^()]*\b(?:optional|to taste|to your taste|as needed|if desired|"
+    r"or more|or less|to serve|for serving|if you can)\b[^()]*\)",
+    re.I,
+)
+VAGUE_START = re.compile(r"^any\b", re.I)
 LEADING_PAREN = re.compile(r"^(?:\([^)]*\)\s*)+")
 MEASURE_PAREN = re.compile(
     r"\s*\([^)]*\d[^)]*\b(?:gal|gallon|oz|ounce|lb|pound|g|gram|kg|ml|"
@@ -120,8 +126,30 @@ TIME = re.compile(
     r"(?P<unit>hours?|hrs?|h|minutes?|mins?|m)?",
     re.I,
 )
+NUMBER_WORDS = {
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8,
+    "nine": 9,
+    "ten": 10,
+    "eleven": 11,
+    "twelve": 12,
+}
+# A yield is only read when it is a number, a number word, or a count of
+# dozens. Free text such as "Depends" or "A batch like this" must stay
+# unknown rather than being coerced into a serving count.
 SERVINGS = re.compile(
-    r"(?:servings?|serves?|yields?)\s*:?\s*(?P<amount>\d+(?:\s*[-–]\s*\d+)?)",
+    r"(?:servings?|serves?|yields?)\s*:?\s*(?P<amount>"
+    r"\d+(?:\s*[-–]\s*\d+)?"
+    r"|(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)"
+    r"(?:\s*[-–\s]\s*dozens?)?"
+    r"|dozens?"
+    r")",
     re.I,
 )
 EQUIPMENT = frozenset({
@@ -362,10 +390,31 @@ def _strip_trailing_clause(text):
     return text
 
 
+def _sentences(text):
+    """Split at sentence endings, ignoring periods inside parentheses."""
+    parts = []
+    depth = 0
+    start = 0
+    for index, char in enumerate(text):
+        if char == "(":
+            depth += 1
+        elif char == ")" and depth:
+            depth -= 1
+        elif char in ".!?" and depth == 0 and (
+            index + 1 == len(text) or text[index + 1].isspace()
+        ):
+            parts.append(text[start:index + 1].strip())
+            start = index + 1
+    tail = text[start:].strip()
+    if tail:
+        parts.append(tail)
+    return parts or [text]
+
+
 def _clean_name(name):
     text = _markdown(name)
-    text = OPTIONAL_SUFFIX.sub("", text)
     text = OPTIONAL_PAREN.sub("", text)
+    text = OPTIONAL_SUFFIX.sub("", text)
     text = MEASURE_PAREN.sub("", text)
     text = LONG_PAREN.sub("", text)
     text = SPACED_DASH.sub("", text)
@@ -374,16 +423,17 @@ def _clean_name(name):
     text = re.sub(r"^\s*of\s+", "", text, flags=re.I)
     # "tortillas. Any brand works ..." is an ingredient followed by an
     # author's aside. Keep the first short sentence.
-    sentences = re.split(r"(?<=[.!?])\s+", text)
+    sentences = _sentences(text)
     if len(sentences) > 1 and len(sentences[0].split()) <= 10:
         text = sentences[0]
     # A long first sentence followed by more prose is an author's note, not
     # an ingredient description. Keep the ingredient, drop the essay.
     if len(text.split()) > COMMENTARY_WORDS:
-        first = re.split(r"(?<=[.!?])\s+", text, maxsplit=1)[0]
+        first = _sentences(text)[0]
         if len(first.split()) <= COMMENTARY_WORDS:
             text = first
     text = re.sub(r"\s+", " ", text).strip(" ,;:-–—.+")
+    text = canonical_ingredient_name(text)
     return text[:NAME_MAX_LENGTH].strip()
 
 
@@ -396,6 +446,10 @@ def parse_ingredient_line(line):
     if text.endswith(":") and not re.search(r"\d", text):
         return None
     if COMMENTARY_START.match(text):
+        return None
+    # "Any extra herbs or spices to your taste" is a shopping suggestion, not
+    # an ingredient; importing it adds prose to the pantry index.
+    if VAGUE_START.match(text):
         return None
 
     # Some recipes put the ingredient first and the amount after a colon:
@@ -445,6 +499,8 @@ def parse_ingredient_line(line):
 
 def _is_equipment(name):
     lowered = name.casefold().strip()
+    if is_equipment(name):
+        return True
     if lowered in EQUIPMENT:
         return True
     return lowered.startswith("thermos")
@@ -458,6 +514,28 @@ def _minutes(amount, unit):
     if (unit or "").casefold() in {"hour", "hours", "hr", "hrs", "h"}:
         value *= 60
     return value
+
+
+def _number(text):
+    text = text.strip().casefold()
+    if text.isdigit():
+        return int(text)
+    if text in NUMBER_WORDS:
+        return NUMBER_WORDS[text]
+    match = re.match(r"\d+", text)
+    return int(match.group(0)) if match else None
+
+
+def _servings(amount):
+    text = " ".join(str(amount or "").split()).casefold()
+    dozen = re.fullmatch(r"(?:(?P<count>[a-z]+|\d+)[\s-]+)?dozens?", text)
+    if dozen:
+        count = dozen.group("count")
+        if count is None:
+            return 12
+        value = _number(count)
+        return None if value is None else value * 12
+    return _number(text)
 
 
 def _recipe_description(lines):
@@ -507,10 +585,7 @@ def parse_recipe(text, filename="recipe.md"):
     servings = None
     match = SERVINGS.search(body_text)
     if match:
-        try:
-            servings = int(re.match(r"\d+", match.group("amount")).group(0))
-        except (AttributeError, ValueError):
-            servings = None
+        servings = _servings(match.group("amount"))
 
     tags = normalize_tags(meta.get("tags") or [])
     cuisine = cuisine_for_tags(tags)

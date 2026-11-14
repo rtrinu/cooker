@@ -86,6 +86,10 @@ TITLE_SUFFIX = re.compile(
     re.I,
 )
 FRACTION = re.compile(r"^[\d.\u00bd\u00bc\u00be\u2153\u2154\u215b\u215c\u215d\u215e]+$")
+# A printed range such as "2-4 Tbsp" is one amount, not two tokens.
+RANGE = re.compile(
+    r"^\d+(?:\.\d+)?\s*[-\u2013\u2014]\s*(?:\d+/\d+|\d+(?:\.\d+)?)$"
+)
 
 # These single letters are what a broken WhitneyNumeric font emits for the
 # common fractions on some home cards. Only K, N and O could be matched to a
@@ -329,7 +333,7 @@ def _is_quantity_token(token):
         return True
     if token.strip("(),.„“”;:—–-*") in FRACTION_GLYPHS:
         return True
-    return bool(FRACTION.match(lowered))
+    return bool(FRACTION.match(lowered) or RANGE.match(lowered))
 
 
 def _looks_malformed(line):
