@@ -11,6 +11,7 @@ nutrition: the printed panel is ground truth, not the served figure.
 """
 
 import statistics
+from collections import Counter
 from pathlib import Path
 
 from django.core.management.base import BaseCommand
@@ -70,11 +71,21 @@ class Command(BaseCommand):
                 )
             )
 
+        gaps = Counter()
+        for _recipe, _reference, computed in rows:
+            for entry in computed.unresolved:
+                reason = entry["reason"]
+                if reason.endswith(" measure"):
+                    reason = "no measure"
+                gaps[reason] += 1
+
         ratios = [row[3] for row in compared]
         summary = (
             f"printed={len(rows)} compared={len(compared)} "
             f"unmeasurable={len(unmeasurable)}"
         )
+        if gaps:
+            summary += f" gaps={self._gap_summary(gaps)}"
         if ratios:
             summary += (
                 f" median_ratio={statistics.median(ratios):.2f}"
@@ -110,7 +121,15 @@ class Command(BaseCommand):
             )
 
         if options["report"]:
-            self._write_report(options["report"], compared, unmeasurable)
+            self._write_report(options["report"], compared, unmeasurable, gaps)
+
+    @staticmethod
+    def _gap_summary(gaps):
+        """Compact worklist of why lines did not contribute."""
+        return " ".join(
+            f"{reason.replace(' ', '-')}={count}"
+            for reason, count in sorted(gaps.items(), key=lambda item: -item[1])
+        )
 
     def _macro_summary(self, compared):
         """Median computed/printed ratio for each macro, when both are present."""
@@ -135,13 +154,14 @@ class Command(BaseCommand):
     def _within(self, ratios, tolerance):
         return sum(1 for ratio in ratios if abs(ratio - 1) <= tolerance)
 
-    def _write_report(self, path, compared, unmeasurable):
+    def _write_report(self, path, compared, unmeasurable, gaps):
         path.parent.mkdir(parents=True, exist_ok=True)
         lines = [
             "Computed nutrition versus printed source panels",
             "",
             f"compared: {len(compared)}",
             f"unmeasurable: {len(unmeasurable)}",
+            f"unresolved reasons: {self._gap_summary(gaps) if gaps else 'none'}",
             "",
         ]
         for recipe, reference, computed, ratio, share in sorted(

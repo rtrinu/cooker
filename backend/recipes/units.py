@@ -247,23 +247,46 @@ def _tokens(text):
     return set(_TOKEN.findall(str(text or "").casefold()))
 
 
+# A card says "diced" where USDA writes "chopped"; without folding the two,
+# the wording looks unrelated and the portion is chosen by its row order.
+PREPARATION_SYNONYMS = {
+    "chopped": "chopped", "diced": "chopped", "cubed": "chopped",
+    "minced": "chopped", "sliced": "sliced", "slice": "sliced",
+    "strips": "sliced", "strip": "sliced", "shredded": "shredded",
+    "grated": "shredded", "shred": "shredded", "leaves": "leaves",
+    "leaf": "leaves", "ground": "ground", "whole": "whole",
+}
+
+
+def _signal_tokens(text):
+    """Tokens for matching, with preparation synonyms folded together."""
+    return {PREPARATION_SYNONYMS.get(token, token) for token in _tokens(text)}
+
+
 def _choose_measure(candidates, unit, context=""):
     """Pick the measure that best fits the recipe line.
 
     USDA often has several portions for one unit: "cup, chopped" and "cup,
     sliced", or a small/medium/large egg. Matching preparation and shape words
-    from the recipe line is the strongest signal. Confidence and USDA's
-    portion order break the remaining ties. A tie between different weights is
-    reported as ambiguous rather than hidden.
+    from the recipe line is the strongest signal. Words shared by every
+    candidate ("cup", or "raw" on every portion of a raw food) carry no
+    information, so they are ignored. Confidence and USDA's portion order break
+    the remaining ties. A tie between different weights is reported as
+    ambiguous rather than hidden.
     """
-    context_tokens = _tokens(context)
-    scored = []
-    for measure in candidates:
-        label_tokens = _tokens(
+    context_tokens = _signal_tokens(context)
+    measures = list(candidates)
+    labels = [
+        _signal_tokens(
             f"{getattr(measure, 'source_label', '')} "
             f"{getattr(measure, 'preparation_state', '')}"
         )
-        overlap = context_tokens & label_tokens
+        for measure in measures
+    ]
+    shared = set.intersection(*labels) if labels else set()
+    scored = []
+    for measure, label_tokens in zip(measures, labels):
+        overlap = context_tokens & (label_tokens - shared)
         score = (
             _measure_confidence(measure) * 2
             + len(overlap) * 3

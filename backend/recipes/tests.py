@@ -1792,6 +1792,27 @@ class ComputeNutritionTests(TestCase):
 
         self.assertAlmostEqual(result.weight_g, 80.0)
 
+    def test_preparation_synonyms_choose_the_matching_portion(self):
+        carrots = Ingredient.objects.create(name="Carrots, raw")
+        IngredientNutrition.objects.create(
+            ingredient=carrots, kcal=41, protein_g=1, carbs_g=10, fat_g=0,
+            fiber_g=3, serving_size_g=100, source="USDA", source_id="carrots",
+        )
+        IngredientMeasure.objects.create(
+            ingredient=carrots, measure="cup", source_label="cup, chopped",
+            amount=1.0, gram_weight=128.0, sequence=1,
+        )
+        IngredientMeasure.objects.create(
+            ingredient=carrots, measure="cup", source_label="cup, grated",
+            amount=1.0, gram_weight=110.0, sequence=2,
+        )
+
+        # The card says "shredded" where the USDA portion says "grated".
+        result = compute([(carrots, "1 cup", "shredded carrots")], servings=1)
+
+        self.assertAlmostEqual(result.weight_g, 110.0)
+        self.assertNotIn("ambiguous-measure", result.warnings)
+
     def test_duplicate_measures_without_a_clue_are_flagged(self):
         pasta = Ingredient.objects.create(name="Pasta, dry")
         IngredientNutrition.objects.create(
@@ -3052,6 +3073,29 @@ class ValidateNutritionCommandTests(TestCase):
 
         self.assertIn("unmeasurable=1", out.getvalue())
         self.assertIn("unmeasurable No lines", out.getvalue())
+
+    def test_summary_reports_why_lines_were_unresolved(self):
+        ingredient = self.measured()
+        recipe = self.printed("Gaps", 100, 2, ingredient)
+        RecipeIngredient.objects.create(
+            recipe=recipe,
+            ingredient=Ingredient.objects.create(name="Mystery"),
+            quantity_text="1 cup",
+            position=2,
+        )
+        RecipeIngredient.objects.create(
+            recipe=recipe,
+            ingredient=Ingredient.objects.create(name="Salt"),
+            quantity_text="to taste",
+            position=3,
+        )
+        out = StringIO()
+
+        call_command("validate_nutrition", stdout=out)
+
+        text = out.getvalue()
+        self.assertIn("no-nutrition=1", text)
+        self.assertIn("no-amount=1", text)
 
     def test_report_lists_the_comparison_and_unresolved_lines(self):
         ingredient = self.measured()
