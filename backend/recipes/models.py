@@ -209,8 +209,34 @@ class RecipeIngredient(models.Model):
     raw_text = models.TextField(blank=True)
     position = models.PositiveIntegerField(default=0)
 
+    # The line's mass, resolved when nutrition is computed. ``grams_method``
+    # names how it was obtained (an exact mass, a USDA portion, or a standard
+    # fallback) and ``grams_confidence`` how much that conversion can be
+    # trusted. Persisting them makes the nutrition panel auditable line by line
+    # instead of hiding the conversion inside the sum.
+    grams = models.FloatField(
+        null=True, blank=True, validators=[MinValueValidator(0)]
+    )
+    grams_method = models.CharField(max_length=30, blank=True)
+    grams_detail = models.CharField(max_length=200, blank=True)
+    grams_confidence = models.FloatField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
+
     class Meta:
         ordering = ("position",)
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(grams__isnull=True)
+                    | models.Q(grams__gt=0)
+                )
+                & confidence_or_null("grams_confidence"),
+                name="recipe_ingredient_valid_grams",
+            ),
+        ]
 
 
 class Nutrition(models.Model):
@@ -225,13 +251,53 @@ class Nutrition(models.Model):
     method = models.CharField(
         max_length=20,
         choices=(("computed", "computed"), ("source", "source")),
-        default="source",
+        default="computed",
     )
-    # How many ingredient lines the computation actually resolved. Source
-    # panels cover the whole recipe, so they leave both at zero and the UI
-    # reads the method instead of a ratio.
+    # How many ingredient lines the computation actually resolved. A partial
+    # panel is a lower bound, so the ratio is part of the published figure.
     lines_used = models.PositiveIntegerField(default=0)
     lines_total = models.PositiveIntegerField(default=0)
+    # Total mass of the ingredient lines that converted. It makes a panel
+    # auditable: energy per 100 g should stay plausible, and a per-serving
+    # weight that is far too small is a sign a conversion went wrong.
+    weight_g = models.FloatField(default=0.0)
+    # Combined confidence: ingredient coverage multiplied by the trust in each
+    # gram conversion. Zero means nothing converted.
+    confidence = models.FloatField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
+    # Stable codes such as "partial", "standard-weight" or "macro-mismatch".
+    warnings = models.JSONField(default=list, blank=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(weight_g__gte=0)
+                & (confidence_or_null("confidence")),
+                name="nutrition_valid_values",
+            ),
+        ]
+
+
+class NutritionReference(models.Model):
+    """A nutrition panel printed by the recipe's own source.
+
+    The published ``Nutrition`` row is always computed from the ingredients,
+    so every recipe is measured the same way. The printed panel is kept beside
+    it as ground truth for :mod:`recipes.management.commands.validate_nutrition`;
+    it is not served as the recipe's nutrition figure.
+    """
+
+    recipe = models.OneToOneField(
+        Recipe, on_delete=models.CASCADE, related_name="nutrition_reference"
+    )
+    kcal = models.FloatField()
+    protein_g = models.FloatField(default=0.0)
+    carbs_g = models.FloatField(default=0.0)
+    fat_g = models.FloatField(default=0.0)
+    fiber_g = models.FloatField(default=0.0)
 
 
 class Substitution(models.Model):

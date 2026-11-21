@@ -35,10 +35,19 @@ from .models import (
     IngredientMeasure,
     IngredientNutrition,
     Nutrition,
+    NutritionReference,
     Recipe,
     RecipeIngredient,
 )
-from .nutrition import compute, coverage, is_reliable, scale_nutrients
+from .nutrition import (
+    MIN_CONFIDENCE,
+    apply_line_conversions,
+    best_nutrition,
+    compute,
+    coverage,
+    is_reliable,
+    scale_nutrients,
+)
 from .nutrition_sources import (
     COFID,
     OPEN_FOOD_FACTS,
@@ -57,7 +66,13 @@ from .openrecipearchive import (
 )
 from .pdf import extract_recipe, split_quantity
 from .public_domain_recipes import parse_ingredient_line, parse_recipe
-from .units import grams_for, normalize_measure, parse_amount
+from .units import (
+    grams_for,
+    normalize_measure,
+    parse_amount,
+    parse_quantity,
+    resolve_grams,
+)
 
 Measure = namedtuple("Measure", ("measure", "amount", "gram_weight"))
 
@@ -1543,6 +1558,63 @@ class ParseAmountTests(TestCase):
         self.assertEqual(parse_amount("1 L milk"), (1, "l", "milk"))
 
 
+class ParseQuantityTests(TestCase):
+    def test_reads_a_range_as_its_midpoint(self):
+        quantity = parse_quantity("2–4 tbsp lime juice")
+
+        self.assertEqual(quantity.amount, 3)
+        self.assertEqual((quantity.low, quantity.high), (2, 4))
+        self.assertEqual(quantity.unit, "tbsp")
+
+    def test_reads_an_or_range(self):
+        quantity = parse_quantity("1 or 2 cups water")
+
+        self.assertEqual(quantity.amount, 1.5)
+        self.assertEqual((quantity.low, quantity.high), (1, 2))
+
+    def test_reads_a_hyphenated_mixed_number_not_a_range(self):
+        quantity = parse_quantity("1-1/2 cups water")
+
+        self.assertEqual(quantity.amount, 1.5)
+        self.assertEqual((quantity.low, quantity.high), (1.5, 1.5))
+
+    def test_reads_a_mass_after_or(self):
+        quantity = parse_quantity("3 ½ cups or 1 lb 5 oz pinto beans")
+
+        self.assertAlmostEqual(quantity.grams, 453.592 + 5 * 28.3495, places=2)
+
+    def test_multiplies_a_per_item_parenthetical(self):
+        quantity = parse_quantity("6 (1 oz each) rolls")
+
+        self.assertAlmostEqual(quantity.grams, 6 * 28.3495, places=2)
+
+    def test_multiplies_a_package_mass(self):
+        quantity = parse_quantity("2 (14 oz) cans tomatoes")
+
+        self.assertAlmostEqual(quantity.grams, 2 * 14 * 28.3495, places=2)
+
+    def test_reads_a_parenthetical_total_mass_without_multiplying(self):
+        quantity = parse_quantity("½ cup (2 oz) crackers")
+
+        self.assertAlmostEqual(quantity.grams, 2 * 28.3495, places=2)
+
+    def test_reads_an_x_multiplier(self):
+        quantity = parse_quantity("2 x 400 g cans")
+
+        self.assertAlmostEqual(quantity.grams, 800.0)
+
+    def test_drops_a_leading_approximation(self):
+        quantity = parse_quantity("about 2 cups flour")
+
+        self.assertEqual(quantity.amount, 2)
+
+    def test_reads_a_count_word_before_the_unit(self):
+        quantity = parse_quantity("half a cup milk")
+
+        self.assertEqual(quantity.amount, 0.5)
+        self.assertEqual(quantity.unit, "cup")
+
+
 class GramsForTests(TestCase):
     def test_exact_measure_match(self):
         measures = [Measure("cup", 1.0, 152.0)]
@@ -1653,16 +1725,115 @@ class ComputeNutritionTests(TestCase):
         self.assertAlmostEqual(result.per_serving["fiber_g"], 19.08 / 4)
 
     def test_a_line_with_no_measure_is_reported(self):
-        # Salt has nutrition but no household measures, so "1 pinch" cannot
-        # become a mass even though its unit table is complete.
-        result = compute(self.lines(("Salt", "1 pinch")), servings=2)
+        # Salt has nutrition but no household measures, and a container word
+        # has no standard weight, so "1 bunch" cannot become a mass.
+        result = compute(self.lines(("Salt", "1 bunch")), servings=2)
 
         self.assertEqual(result.lines_used, 0)
         self.assertEqual(result.per_serving["kcal"], 0)
         self.assertIn(
-            {"ingredient": "Salt", "quantity": "1 pinch", "reason": "no pinch measure"},
+            {"ingredient": "Salt", "quantity": "1 bunch", "reason": "no bunch measure"},
             result.unresolved,
         )
+
+    def test_a_small_measure_falls_back_to_a_standard_weight(self):
+        # A pinch has no USDA measure for salt; the small-unit table supplies
+        # one, and the panel records that it was a low-confidence estimate.
+        result = compute(self.lines(("Salt", "1 pinch")), servings=2)
+
+        self.assertEqual(result.lines_used, 1)
+        self.assertAlmostEqual(result.weight_g, 0.36)
+        self.assertIn("standard-weight", result.warnings)
+
+    def test_a_volume_without_a_measure_uses_a_standard_density(self):
+        flour = Ingredient.objects.create(name="All-purpose flour")
+        IngredientNutrition.objects.create(
+            ingredient=flour, kcal=364, protein_g=10, carbs_g=76, fat_g=1,
+            fiber_g=2.7, serving_size_g=100, source="USDA", source_id="flour",
+        )
+
+        result = compute([(flour, "1 cup")], servings=1)
+
+        self.assertEqual(result.lines_used, 1)
+        # 236.588 ml at the standard 0.53 g/ml.
+        self.assertAlmostEqual(result.weight_g, 236.588 * 0.53, places=2)
+        self.assertIn("standard-weight", result.warnings)
+
+    def test_a_stated_mass_wins_over_a_household_measure(self):
+        # "¼ cup or 1 oz" states the weight outright, so it must not be scaled
+        # through the cup measure.
+        result = compute(self.lines(("Rolled oats", "¼ cup or 1 oz")), servings=1)
+
+        self.assertAlmostEqual(result.weight_g, 28.3495, places=2)
+        self.assertAlmostEqual(result.totals["kcal"], 389 * 0.283495, places=2)
+
+    def test_a_printed_range_uses_the_midpoint(self):
+        result = compute(self.lines(("Rolled oats", "1–3 cups")), servings=1)
+
+        self.assertAlmostEqual(result.weight_g, 180.0)
+        self.assertAlmostEqual(result.totals["kcal"], 700.2)
+
+    def test_context_chooses_between_duplicate_measures(self):
+        pasta = Ingredient.objects.create(name="Pasta, dry")
+        IngredientNutrition.objects.create(
+            ingredient=pasta, kcal=371, protein_g=13, carbs_g=75, fat_g=1.5,
+            fiber_g=3.2, serving_size_g=100, source="USDA", source_id="pasta",
+        )
+        IngredientMeasure.objects.create(
+            ingredient=pasta, measure="cup", source_label="cup, elbows",
+            amount=1.0, gram_weight=100.0, sequence=1,
+        )
+        IngredientMeasure.objects.create(
+            ingredient=pasta, measure="cup", source_label="cup, penne",
+            amount=1.0, gram_weight=80.0, sequence=2,
+        )
+
+        result = compute([(pasta, "1 cup", "penne pasta")], servings=1)
+
+        self.assertAlmostEqual(result.weight_g, 80.0)
+
+    def test_duplicate_measures_without_a_clue_are_flagged(self):
+        pasta = Ingredient.objects.create(name="Pasta, dry")
+        IngredientNutrition.objects.create(
+            ingredient=pasta, kcal=371, protein_g=13, carbs_g=75, fat_g=1.5,
+            fiber_g=3.2, serving_size_g=100, source="USDA", source_id="pasta",
+        )
+        IngredientMeasure.objects.create(
+            ingredient=pasta, measure="cup", source_label="cup, elbows",
+            amount=1.0, gram_weight=100.0, sequence=1,
+        )
+        IngredientMeasure.objects.create(
+            ingredient=pasta, measure="cup", source_label="cup, penne",
+            amount=1.0, gram_weight=80.0, sequence=2,
+        )
+
+        result = compute([(pasta, "1 cup", "pasta")], servings=1)
+
+        self.assertIn("ambiguous-measure", result.warnings)
+
+    def test_confidence_and_weight_are_reported(self):
+        result = compute(self.lines(("Rolled oats", "1 cup")), servings=1)
+
+        self.assertAlmostEqual(result.weight_g, 90.0)
+        # 0.9 for the USDA cup portion times 0.9 for the unverified nutrition
+        # record, with no unresolved lines.
+        self.assertAlmostEqual(result.confidence, 0.81)
+        self.assertGreaterEqual(result.confidence, MIN_CONFIDENCE)
+
+    def test_best_nutrition_prefers_a_verified_record(self):
+        estimated = IngredientNutrition.objects.create(
+            ingredient=self.oats, kcal=100, protein_g=1, carbs_g=1, fat_g=1,
+            serving_size_g=100, source="USDA", source_id="estimated",
+            verification_status="estimated",
+        )
+        verified = IngredientNutrition.objects.create(
+            ingredient=self.oats, kcal=200, protein_g=1, carbs_g=1, fat_g=1,
+            serving_size_g=100, source="USDA", source_id="verified",
+            verification_status="verified",
+        )
+
+        self.assertEqual(best_nutrition(self.oats), verified)
+        self.assertNotEqual(best_nutrition(self.oats), estimated)
 
     def test_a_line_without_a_quantity_is_reported(self):
         result = compute(self.lines(("Salt", "to taste")), servings=2)
@@ -1683,6 +1854,37 @@ class ComputeNutritionTests(TestCase):
 
         self.assertEqual(result.lines_used, 0)
         self.assertEqual(result.unresolved[0]["reason"], "no nutrition")
+        # The mass still resolves from the ingredient's own measure, so the
+        # line can show grams and name the missing nutrition as the blocker.
+        self.assertAlmostEqual(result.lines[0].grams, 2.3)
+        self.assertEqual(result.lines[0].method, "measure")
+
+    def test_line_results_carry_the_conversion_provenance(self):
+        result = compute(self.lines(("Rolled oats", "1 cup")), servings=1)
+
+        line = result.lines[0]
+        self.assertAlmostEqual(line.grams, 90.0)
+        self.assertEqual(line.method, "measure")
+        self.assertEqual(line.detail, "1 cup = 90 g")
+        self.assertAlmostEqual(line.confidence, 0.9)
+
+    def test_line_conversions_are_applied_to_recipe_ingredient_rows(self):
+        recipe = Recipe.objects.create(name="Oats", servings=1)
+        row = RecipeIngredient(
+            recipe=recipe,
+            ingredient=self.oats,
+            quantity_text="1 cup",
+            position=1,
+        )
+        result = compute(self.lines(("Rolled oats", "1 cup")), servings=1)
+
+        fields = apply_line_conversions(result, [row])
+
+        self.assertIn("grams", fields)
+        self.assertAlmostEqual(row.grams, 90.0)
+        self.assertEqual(row.grams_method, "measure")
+        self.assertEqual(row.grams_detail, "1 cup = 90 g")
+        self.assertAlmostEqual(row.grams_confidence, 0.9)
 
     def test_a_mix_of_resolved_and_unresolved_lines(self):
         result = compute(
@@ -1751,14 +1953,14 @@ class RecipeModelTests(TestCase):
             ["Oats", "Salt"],
         )
 
-    def test_nutrition_method_defaults_to_source(self):
+    def test_nutrition_method_defaults_to_computed(self):
         recipe = Recipe.objects.create(name="Soup")
 
         nutrition = Nutrition.objects.create(
             recipe=recipe, kcal=1, protein_g=1, carbs_g=1, fat_g=1, fiber_g=0,
         )
 
-        self.assertEqual(nutrition.method, "source")
+        self.assertEqual(nutrition.method, "computed")
 
 
 def card_page(left, right=None, whole=None):
@@ -2155,6 +2357,29 @@ class RecipeImportCommandTests(TestCase):
         nutrition = Nutrition.objects.get()
         self.assertEqual(nutrition.method, "computed")
         self.assertAlmostEqual(nutrition.kcal, 16 / 6)
+        row = RecipeIngredient.objects.get()
+        self.assertAlmostEqual(row.grams, 40.0)
+        self.assertEqual(row.grams_method, "measure")
+        self.assertEqual(row.grams_detail, "1 cup = 160 g")
+        self.assertAlmostEqual(row.grams_confidence, 0.9)
+
+    @patch("recipes.management.commands.import_recipe.parse_pdf")
+    def test_stores_grams_for_a_line_without_nutrition(self, parse_pdf):
+        food = Ingredient.objects.create(name="Mystery food")
+        IngredientMeasure.objects.create(
+            ingredient=food, measure="cup", source_label="cup",
+            amount=1.0, gram_weight=100.0, sequence=1,
+        )
+        parse_pdf.return_value = self.recipe_data(
+            ingredients=["½ cup Mystery food"]
+        )
+
+        call_command("import_recipe", str(self.pdf()), stdout=StringIO())
+
+        row = RecipeIngredient.objects.get()
+        self.assertAlmostEqual(row.grams, 50.0)
+        self.assertEqual(row.grams_method, "measure")
+        self.assertFalse(Nutrition.objects.exists())
 
     @patch("recipes.management.commands.import_recipe.parse_pdf")
     def test_matches_an_existing_ingredient_by_alias(self, parse_pdf):
@@ -2189,7 +2414,7 @@ class RecipeImportCommandTests(TestCase):
         self.assertEqual(Ingredient.objects.count(), 1)
 
     @patch("recipes.management.commands.import_recipe.parse_pdf")
-    def test_stores_the_printed_panel_as_source_nutrition(self, parse_pdf):
+    def test_keeps_the_printed_panel_as_a_reference_not_the_served_figure(self, parse_pdf):
         parse_pdf.return_value = self.recipe_data(
             serving_size="1-cup",
             nutrients={
@@ -2200,10 +2425,39 @@ class RecipeImportCommandTests(TestCase):
 
         call_command("import_recipe", str(self.pdf()), stdout=StringIO())
 
-        nutrition = Nutrition.objects.get()
-        self.assertEqual(nutrition.method, "source")
-        self.assertEqual(nutrition.kcal, 298)
+        reference = NutritionReference.objects.get()
+        self.assertEqual(reference.kcal, 298)
+        self.assertEqual(reference.fiber_g, 7)
         self.assertEqual(Recipe.objects.get().serving_size, "1-cup")
+        # Nothing converts without ingredient nutrition, so no computed panel
+        # is published from this card.
+        self.assertFalse(Nutrition.objects.exists())
+
+    @patch("recipes.management.commands.import_recipe.parse_pdf")
+    def test_computes_even_when_the_card_prints_a_panel(self, parse_pdf):
+        onions = Ingredient.objects.create(name="Fresh onions, chopped")
+        IngredientNutrition.objects.create(
+            ingredient=onions, kcal=40, protein_g=1.1, carbs_g=9.3,
+            fat_g=0.1, fiber_g=1.7, serving_size_g=100,
+            source="USDA", source_id="1",
+        )
+        IngredientMeasure.objects.create(
+            ingredient=onions, measure="cup", source_label="cup",
+            amount=1.0, gram_weight=160.0, sequence=1,
+        )
+        parse_pdf.return_value = self.recipe_data(
+            ingredients=["¼ cup Fresh onions, chopped"],
+            nutrients={"kcal": 298, "protein_g": 9, "carbs_g": 52, "fat_g": 6},
+        )
+
+        call_command("import_recipe", str(self.pdf()), stdout=StringIO())
+
+        nutrition = Nutrition.objects.get()
+        self.assertEqual(nutrition.method, "computed")
+        self.assertAlmostEqual(nutrition.kcal, 16 / 6)
+        self.assertEqual(NutritionReference.objects.get().kcal, 298)
+        self.assertEqual(nutrition.lines_used, 1)
+        self.assertGreater(nutrition.weight_g, 0)
 
     @patch("recipes.management.commands.import_recipe.parse_pdf")
     def test_computes_when_the_card_has_no_panel(self, parse_pdf):
@@ -2562,16 +2816,71 @@ class RecomputeNutritionCommandTests(TestCase):
         self.assertAlmostEqual(nutrition.kcal, 350.1 / 2)
         self.assertEqual((nutrition.lines_used, nutrition.lines_total), (1, 1))
 
-    def test_printed_panels_are_left_alone(self):
+    def test_recomputes_and_leaves_the_printed_reference_alone(self):
         recipe = Recipe.objects.create(name="Printed", servings=2)
-        Nutrition.objects.create(
-            recipe=recipe, kcal=250, protein_g=1, carbs_g=1, fat_g=1,
-            fiber_g=0, method="source",
+        oats = self.ingredient()
+        RecipeIngredient.objects.create(
+            recipe=recipe, ingredient=oats, quantity_text="1 cup", position=1
+        )
+        NutritionReference.objects.create(
+            recipe=recipe, kcal=250, protein_g=1, carbs_g=1, fat_g=1, fiber_g=0,
         )
 
         call_command("recompute_nutrition", stdout=StringIO())
 
-        self.assertEqual(Nutrition.objects.get().kcal, 250)
+        self.assertAlmostEqual(Nutrition.objects.get().kcal, 350.1 / 2)
+        self.assertEqual(NutritionReference.objects.get().kcal, 250)
+
+    def test_reports_confidence_and_weight(self):
+        recipe = Recipe.objects.create(name="Oats", servings=2)
+        oats = self.ingredient()
+        RecipeIngredient.objects.create(
+            recipe=recipe, ingredient=oats, quantity_text="1 cup", position=1
+        )
+        out = StringIO()
+
+        call_command("recompute_nutrition", stdout=out)
+
+        nutrition = Nutrition.objects.get()
+        self.assertAlmostEqual(nutrition.weight_g, 90.0)
+        self.assertGreater(nutrition.confidence, 0)
+        self.assertIn("low_confidence=0", out.getvalue())
+
+    def test_persists_grams_on_each_ingredient_line(self):
+        recipe = Recipe.objects.create(name="Oats and mystery", servings=2)
+        oats = self.ingredient()
+        oats_row = RecipeIngredient.objects.create(
+            recipe=recipe, ingredient=oats, quantity_text="1 cup", position=1
+        )
+        mystery_row = RecipeIngredient.objects.create(
+            recipe=recipe,
+            ingredient=Ingredient.objects.create(name="Mystery"),
+            quantity_text="1 cup",
+            position=2,
+        )
+
+        call_command("recompute_nutrition", stdout=StringIO())
+
+        oats_row.refresh_from_db()
+        mystery_row.refresh_from_db()
+        self.assertAlmostEqual(oats_row.grams, 90.0)
+        self.assertEqual(oats_row.grams_method, "measure")
+        self.assertEqual(oats_row.grams_detail, "1 cup = 90 g")
+        self.assertAlmostEqual(oats_row.grams_confidence, 0.9)
+        self.assertIsNone(mystery_row.grams)
+        self.assertEqual(mystery_row.grams_method, "")
+
+    def test_dry_run_does_not_write_grams(self):
+        recipe = Recipe.objects.create(name="Oats", servings=2)
+        oats = self.ingredient()
+        row = RecipeIngredient.objects.create(
+            recipe=recipe, ingredient=oats, quantity_text="1 cup", position=1
+        )
+
+        call_command("recompute_nutrition", "--dry-run", stdout=StringIO())
+
+        row.refresh_from_db()
+        self.assertIsNone(row.grams)
 
     def test_report_lists_unresolved_lines(self):
         recipe = Recipe.objects.create(name="Oats and mystery", servings=2)
@@ -2712,9 +3021,9 @@ class ValidateNutritionCommandTests(TestCase):
 
     def printed(self, name, kcal, servings, ingredient=None, quantity="1 cup"):
         recipe = Recipe.objects.create(name=name, servings=servings)
-        Nutrition.objects.create(
+        NutritionReference.objects.create(
             recipe=recipe, kcal=kcal, protein_g=0, carbs_g=0, fat_g=0,
-            fiber_g=0, method="source",
+            fiber_g=0,
         )
         if ingredient is not None:
             RecipeIngredient.objects.create(

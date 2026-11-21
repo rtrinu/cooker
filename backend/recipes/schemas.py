@@ -58,6 +58,12 @@ class RecipeIngredientOut(Schema):
     quantity_text: str
     raw_text: str
     position: int
+    # The line's resolved mass and how it was obtained. ``grams`` is null when
+    # the amount could not be converted; the method and detail explain why.
+    grams: float | None = None
+    grams_method: str = ""
+    grams_detail: str = ""
+    grams_confidence: float | None = None
 
 
 class NutritionOut(Schema):
@@ -69,6 +75,9 @@ class NutritionOut(Schema):
     method: str
     lines_used: int = 0
     lines_total: int = 0
+    weight_g: float = 0
+    confidence: float | None = None
+    warnings: list[str] = []
 
 
 class RecipeListOut(Schema):

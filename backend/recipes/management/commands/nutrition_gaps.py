@@ -19,8 +19,8 @@ from django.core.management.base import BaseCommand, CommandError
 
 from recipes.matching import IngredientIndex
 from recipes.models import RecipeIngredient
-from recipes.nutrition import scale_nutrients
-from recipes.units import grams_for, parse_amount
+from recipes.nutrition import best_nutrition, scale_nutrients
+from recipes.units import parse_quantity, resolve_grams
 
 
 class Command(BaseCommand):
@@ -105,8 +105,8 @@ class Command(BaseCommand):
                 },
             )
             gap["lines"] += 1
-            amount, unit, _ = parse_amount(row.quantity_text)
-            if amount is None:
+            quantity = parse_quantity(row.quantity_text)
+            if quantity.amount is None:
                 gap["no_amount"] += 1
                 continue
             suggestions = index.suggest(
@@ -123,16 +123,20 @@ class Command(BaseCommand):
             best = suggestions[0]
             if best.score > gap["best_score"]:
                 gap["best_score"] = best.score
-            grams = grams_for(best.ingredient.measures.all(), unit, amount)
-            if grams is None:
+            conversion = resolve_grams(
+                best.ingredient,
+                quantity,
+                f"{best.ingredient.name} {row.raw_text or ingredient.name}",
+            )
+            if conversion is None:
                 gap["no_measure"] += 1
                 continue
-            nutrition = best.ingredient.nutrition.first()
+            nutrition = best_nutrition(best.ingredient)
             if nutrition is None:
                 gap["no_candidate"] += 1
                 continue
             gap["measurable"] += 1
-            gap["kcal"] += scale_nutrients(nutrition, grams)["kcal"]
+            gap["kcal"] += scale_nutrients(nutrition, conversion.grams)["kcal"]
         return gaps
 
     def _write_report(self, path, ranked):

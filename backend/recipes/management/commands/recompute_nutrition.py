@@ -1,8 +1,9 @@
 """Rebuild computed nutrition after ingredient data or matching changes.
 
-Printed panels are never touched: they are the source's own numbers. Every
-other recipe is recomputed from its current ingredient lines. A partial sum
-can only undercount the dish, so it is stored as a lower bound and reported
+Every recipe is recomputed from its current ingredient lines. Printed panels
+live on ``NutritionReference`` and are never touched here: they are the source's
+own numbers, kept for validation. A partial sum can only undercount the dish,
+so it is stored as a lower bound with its coverage and confidence, and reported
 with the lines that could not be measured.
 """
 
@@ -10,12 +11,17 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 
-from recipes.models import Nutrition, Recipe
-from recipes.nutrition import compute, coverage
+from recipes.models import Nutrition, Recipe, RecipeIngredient
+from recipes.nutrition import (
+    MIN_CONFIDENCE,
+    apply_line_conversions,
+    compute,
+    coverage,
+)
 
 
 class Command(BaseCommand):
-    help = "Recompute nutrition for recipes that do not have a printed panel"
+    help = "Recompute every recipe's nutrition from its ingredient lines"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -46,22 +52,30 @@ class Command(BaseCommand):
 
         recipes = (
             Recipe.objects.select_related("nutrition")
-            .prefetch_related("ingredients__ingredient__nutrition")
+            .prefetch_related(
+                "ingredients__ingredient__nutrition",
+                "ingredients__ingredient__measures",
+            )
             .order_by("name")
         )
-        created = updated = removed = kept = 0
+        created = updated = removed = low_confidence = 0
         partial = []
 
         for recipe in recipes:
             existing = getattr(recipe, "nutrition", None)
-            if existing is not None and existing.method == "source":
-                kept += 1
-                continue
-
+            rows = list(recipe.ingredients.all())
             pairs = [
-                (row.ingredient, row.quantity_text) for row in recipe.ingredients.all()
+                (row.ingredient, row.quantity_text, row.raw_text or row.ingredient.name)
+                for row in rows
             ]
-            computed = compute(pairs, recipe.servings or 1)
+            computed = compute(pairs, recipe.servings)
+            # Refresh the persisted per-line grams even when the recipe has no
+            # published panel; a line that converted is still evidence of the
+            # ingredient data behind it.
+            if rows:
+                fields = apply_line_conversions(computed, rows)
+                if not options["dry_run"]:
+                    RecipeIngredient.objects.bulk_update(rows, fields)
             share = coverage(computed)
             usable = bool(recipe.servings) and computed.lines_used > 0
             usable = usable and computed.totals["kcal"] > 0
@@ -74,14 +88,19 @@ class Command(BaseCommand):
                         existing.delete()
                 continue
 
-            if share < 1:
+            if share < 1 or computed.confidence < MIN_CONFIDENCE:
                 partial.append((recipe, share, computed))
+            if computed.confidence < MIN_CONFIDENCE:
+                low_confidence += 1
 
             defaults = {
                 **computed.per_serving,
                 "method": "computed",
                 "lines_used": computed.lines_used,
                 "lines_total": computed.lines_total,
+                "weight_g": computed.weight_g,
+                "confidence": computed.confidence,
+                "warnings": computed.warnings,
             }
             if existing is None:
                 created += 1
@@ -99,7 +118,7 @@ class Command(BaseCommand):
 
         summary = (
             f"created={created} updated={updated} removed={removed} "
-            f"source_kept={kept} partial={len(partial)}"
+            f"partial={len(partial)} low_confidence={low_confidence}"
         )
         if options["dry_run"]:
             self.stdout.write(f"dry run: {summary}")

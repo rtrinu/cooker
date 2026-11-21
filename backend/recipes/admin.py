@@ -4,6 +4,7 @@ from .models import (
     IngredientMeasure,
     IngredientNutrition,
     Nutrition,
+    NutritionReference,
     Recipe,
     RecipeIngredient,
     Substitution,
@@ -76,14 +77,41 @@ class RecipeIngredientInline(admin.TabularInline):
     model = RecipeIngredient
     extra = 1
     autocomplete_fields = ("ingredient",)
-    fields = ("ingredient", "quantity_text", "raw_text", "position")
+    fields = (
+        "ingredient",
+        "quantity_text",
+        "raw_text",
+        "position",
+        "grams",
+        "grams_method",
+        "grams_detail",
+        "grams_confidence",
+    )
+    readonly_fields = ("grams", "grams_method", "grams_detail", "grams_confidence")
 
 
 class NutritionInline(admin.TabularInline):
     model = Nutrition
     max_num = 1
     extra = 1
-    fields = ("kcal", "protein_g", "carbs_g", "fat_g", "fiber_g", "method")
+    fields = (
+        "kcal",
+        "protein_g",
+        "carbs_g",
+        "fat_g",
+        "fiber_g",
+        "method",
+        "weight_g",
+        "confidence",
+        "warnings",
+    )
+
+
+class NutritionReferenceInline(admin.StackedInline):
+    model = NutritionReference
+    max_num = 1
+    extra = 0
+    fields = ("kcal", "protein_g", "carbs_g", "fat_g", "fiber_g")
 
 
 @admin.register(Substitution)
@@ -107,7 +135,7 @@ class RecipeAdmin(admin.ModelAdmin):
     )
     list_filter = ("category", "source", "collection")
     search_fields = ("name", "slug", "source_id", "collection")
-    inlines = [RecipeIngredientInline, NutritionInline]
+    inlines = [RecipeIngredientInline, NutritionInline, NutritionReferenceInline]
 
     @admin.display(description="total time")
     def total_time(self, obj):

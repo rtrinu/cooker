@@ -28,6 +28,10 @@ class ApiTests(TestCase):
             ingredient=cls.flour,
             quantity_text="2 cups",
             position=1,
+            grams=250.0,
+            grams_method="measure",
+            grams_detail="1 cup = 125 g",
+            grams_confidence=0.9,
         )
         RecipeIngredient.objects.create(
             recipe=cls.recipe,
@@ -150,7 +154,14 @@ class ApiTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["name"], "Test Cake")
         self.assertEqual(len(payload["ingredients"]), 2)
-        self.assertEqual(payload["ingredients"][0]["ingredient"]["name"], "Flour")
+        flour = payload["ingredients"][0]
+        self.assertEqual(flour["ingredient"]["name"], "Flour")
+        self.assertEqual(flour["grams"], 250.0)
+        self.assertEqual(flour["grams_method"], "measure")
+        self.assertEqual(flour["grams_detail"], "1 cup = 125 g")
+        self.assertEqual(flour["grams_confidence"], 0.9)
+        # A line that could not be converted stays explicit rather than zero.
+        self.assertIsNone(payload["ingredients"][1]["grams"])
         self.assertEqual(payload["nutrition"]["kcal"], 250)
 
     def test_recipe_detail_missing(self):

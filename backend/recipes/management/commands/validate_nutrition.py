@@ -1,11 +1,13 @@
-"""Compare computed nutrition with the printed panels that act as ground truth.
+"""Compare computed nutrition with the printed panels kept as ground truth.
 
 Only recipes whose source prints a "Nutrients Per Serving" panel can be
-checked: they are the one place where the true per-serving calories are known.
-The command recomputes each of those recipes from its ingredient lines and
-reports how close the calculation gets, together with the lines that could not
-be measured. It is a regression check for matching and unit-conversion changes,
-not a source of published nutrition: the printed panel always wins.
+checked: they are the one place where the true per-serving values are known.
+The printed panel lives on ``NutritionReference`` because the published
+``Nutrition`` row is always computed from the ingredients. This command
+recomputes each referenced recipe, scores it against the printed calories and
+macros, and reports the lines that could not be measured. It is a regression
+check for matching and unit-conversion changes, not a source of published
+nutrition: the printed panel is ground truth, not the served figure.
 """
 
 import statistics
@@ -13,7 +15,7 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand
 
-from recipes.models import Nutrition
+from recipes.models import NUTRIENT_FIELDS, NutritionReference
 from recipes.nutrition import compute, coverage
 
 
@@ -35,31 +37,35 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         rows = []
-        for source in (
-            Nutrition.objects.filter(method="source")
-            .select_related("recipe")
+        references = (
+            NutritionReference.objects.select_related("recipe")
+            .prefetch_related(
+                "recipe__ingredients__ingredient__nutrition",
+                "recipe__ingredients__ingredient__measures",
+            )
             .order_by("recipe__name")
-        ):
-            recipe = source.recipe
+        )
+        for reference in references:
+            recipe = reference.recipe
             pairs = [
-                (line.ingredient, line.quantity_text)
-                for line in recipe.ingredients.select_related("ingredient")
+                (line.ingredient, line.quantity_text, line.raw_text or line.ingredient.name)
+                for line in recipe.ingredients.all()
             ]
             computed = compute(pairs, recipe.servings)
-            rows.append((recipe, source, computed))
+            rows.append((recipe, reference, computed))
 
         compared = []
         unmeasurable = []
-        for recipe, source, computed in rows:
-            if not recipe.servings or not computed.lines_used or not source.kcal:
-                unmeasurable.append((recipe, source, computed))
+        for recipe, reference, computed in rows:
+            if not recipe.servings or not computed.lines_used or not reference.kcal:
+                unmeasurable.append((recipe, reference, computed))
                 continue
             compared.append(
                 (
                     recipe,
-                    source,
+                    reference,
                     computed,
-                    computed.per_serving["kcal"] / source.kcal,
+                    computed.per_serving["kcal"] / reference.kcal,
                     coverage(computed),
                 )
             )
@@ -79,25 +85,52 @@ class Command(BaseCommand):
             )
         self.stdout.write(self.style.SUCCESS(summary))
 
-        for recipe, source, computed, ratio, share in sorted(
+        macro_line = self._macro_summary(compared)
+        if macro_line:
+            self.stdout.write(f"  {macro_line}")
+
+        for recipe, reference, computed, ratio, share in sorted(
             compared, key=lambda row: abs(row[3] - 1), reverse=True
         )[: max(0, options["limit"])]:
             self.stdout.write(
-                f"  {recipe.name[:48]:50} printed={source.kcal:7.1f} "
+                f"  {recipe.name[:48]:50} printed={reference.kcal:7.1f} "
                 f"computed={computed.per_serving['kcal']:7.1f} "
                 f"ratio={ratio:5.2f} coverage={share:4.0%} "
+                f"confidence={computed.confidence:4.2f} "
                 f"({computed.lines_used}/{computed.lines_total})"
+                + self._warning_suffix(computed)
             )
 
-        for recipe, source, computed in unmeasurable:
+        for recipe, reference, computed in unmeasurable:
             self.stdout.write(
                 f"  unmeasurable {recipe.name[:48]:50} "
-                f"printed={source.kcal:7.1f} "
+                f"printed={reference.kcal:7.1f} "
                 f"({computed.lines_used}/{computed.lines_total})"
+                + self._warning_suffix(computed)
             )
 
         if options["report"]:
             self._write_report(options["report"], compared, unmeasurable)
+
+    def _macro_summary(self, compared):
+        """Median computed/printed ratio for each macro, when both are present."""
+        parts = []
+        for field in NUTRIENT_FIELDS:
+            if field == "kcal":
+                continue
+            ratios = [
+                computed.per_serving[field] / getattr(reference, field)
+                for _recipe, reference, computed, _ratio, _share in compared
+                if getattr(reference, field)
+            ]
+            if ratios:
+                parts.append(f"{field}_median={statistics.median(ratios):.2f}")
+        return " ".join(parts)
+
+    def _warning_suffix(self, computed):
+        if not computed.warnings:
+            return ""
+        return " warnings=" + ",".join(computed.warnings)
 
     def _within(self, ratios, tolerance):
         return sum(1 for ratio in ratios if abs(ratio - 1) <= tolerance)
@@ -111,26 +144,40 @@ class Command(BaseCommand):
             f"unmeasurable: {len(unmeasurable)}",
             "",
         ]
-        for recipe, source, computed, ratio, share in sorted(
+        for recipe, reference, computed, ratio, share in sorted(
             compared, key=lambda row: row[3]
         ):
             lines.append(
                 f"{recipe.slug or recipe.pk}  {recipe.name}  "
-                f"printed={source.kcal:.1f} computed={computed.per_serving['kcal']:.1f} "
+                f"printed={reference.kcal:.1f} computed={computed.per_serving['kcal']:.1f} "
                 f"ratio={ratio:.2f} coverage={share:.0%} "
+                f"confidence={computed.confidence:.2f} "
                 f"({computed.lines_used}/{computed.lines_total})"
+                f"{self._warning_suffix(computed)}"
             )
+            for field in NUTRIENT_FIELDS:
+                if field == "kcal":
+                    continue
+                printed = getattr(reference, field)
+                if not printed:
+                    continue
+                lines.append(
+                    f"    {field}: printed={printed:.1f} "
+                    f"computed={computed.per_serving[field]:.1f} "
+                    f"ratio={computed.per_serving[field] / printed:.2f}"
+                )
             for entry in computed.unresolved:
                 lines.append(
                     f"    {entry['reason']}: {entry['quantity'] or '(no amount)'} "
                     f"{entry['ingredient']}"
                 )
             lines.append("")
-        for recipe, source, computed in unmeasurable:
+        for recipe, reference, computed in unmeasurable:
             lines.append(
                 f"{recipe.slug or recipe.pk}  {recipe.name}  "
-                f"unmeasurable printed={source.kcal:.1f} "
+                f"unmeasurable printed={reference.kcal:.1f} "
                 f"({computed.lines_used}/{computed.lines_total})"
+                f"{self._warning_suffix(computed)}"
             )
             for entry in computed.unresolved:
                 lines.append(
@@ -139,4 +186,6 @@ class Command(BaseCommand):
                 )
             lines.append("")
         path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
-        self.stdout.write(f"report: wrote {len(compared) + len(unmeasurable)} recipes to {path}")
+        self.stdout.write(
+            f"report: wrote {len(compared) + len(unmeasurable)} recipes to {path}"
+        )

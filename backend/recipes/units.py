@@ -1,13 +1,22 @@
 """Convert recipe quantities to grams and split quantities out of lines.
 
 Ingredient measures come from the USDA foodPortions table as ``amount`` units
-weighing ``gram_weight`` grams, so grams are always
-``amount_wanted * gram_weight / measure.amount``. That is the only way a
-volume becomes a mass here: nothing assumes a density, because the guess work
-is exactly what would make the per-serving figure worthless.
+weighing ``gram_weight`` grams, so a measured conversion is always
+``amount_wanted * gram_weight / measure.amount``. A mass printed on the recipe
+line wins over any portion, and only when the food has no usable measure do we
+fall back to a standard cooking weight. Every path returns a confidence and a
+short provenance string so a computed panel can say how it was built.
 """
 
 import re
+from dataclasses import dataclass
+
+from .standard_weights import (
+    SMALL_UNIT_GRAMS,
+    grams_for_count,
+    grams_for_unit,
+    grams_for_volume,
+)
 
 # Canonical name for every unit spelling USDA writes in foodPortions. The word
 # has to open the label because only then does it describe ``amount``: in
@@ -116,7 +125,8 @@ def normalize_measure(label):
 
 
 VOLUME_UNITS = frozenset({
-    "ml", "l", "fl oz", "tsp", "tbsp", "cup", "gill", "pint", "quart", "gallon",
+    "ml", "l", "dl", "cl", "fl oz", "tsp", "tbsp", "cup", "gill", "pint",
+    "quart", "gallon",
 })
 MASS_UNITS = frozenset({"mg", "g", "kg", "oz", "lb"})
 
@@ -131,6 +141,52 @@ VOLUME_IN_ML = {
 MASS_IN_GRAMS = {
     "mg": 0.001, "g": 1.0, "kg": 1000.0, "oz": 28.3495, "lb": 453.592,
 }
+
+# Every canonical unit that is not a dimension. These are the units that need
+# an ingredient-specific weight: "each", "clove", "slice", a size word, and the
+# container words a recipe writes as a unit.
+COUNT_UNITS = frozenset(
+    set(MEASURE_SYNONYMS.values()) - VOLUME_UNITS - MASS_UNITS
+)
+CONTAINER_UNITS = frozenset({
+    "can", "jar", "package", "stick", "loaf", "bunch", "head",
+})
+SIZE_UNITS = frozenset({"small", "medium", "large"})
+
+
+@dataclass(frozen=True)
+class Quantity:
+    """A parsed recipe amount, including an exact mass stated on the line.
+
+    ``amount`` is the value to compute with. For a printed range it is the
+    midpoint, and ``low``/``high`` keep the original bounds. ``grams`` is a mass
+    the line states outright, such as "¼ cup (1 oz)" or "2 (14 oz) cans"; when
+    present it is more exact than any household measure and wins.
+    """
+
+    amount: float | None
+    unit: str | None
+    rest: str
+    low: float | None = None
+    high: float | None = None
+    grams: float | None = None
+    note: str = ""
+
+
+@dataclass(frozen=True)
+class Conversion:
+    """The result of converting one recipe amount to grams."""
+
+    grams: float
+    confidence: float
+    method: str
+    detail: str = ""
+    ambiguous: bool = False
+
+    @property
+    def standard(self):
+        """Whether this conversion used a fallback rather than measured data."""
+        return self.method.startswith("standard")
 
 # USDA foodPortions use US customary volume units and metric mass units in the
 # same file. Recording which system a conversion came from matters because a
@@ -171,28 +227,206 @@ def _scaled(measure, amount):
     return amount * measure.gram_weight / measure.amount
 
 
+def _measure_confidence(measure):
+    """Confidence stored on a measure, or the default for its unit kind."""
+    confidence = getattr(measure, "confidence", None)
+    if confidence is not None:
+        return confidence
+    return conversion_confidence_for(measure.measure)
+
+
+def _measure_label(measure):
+    label = getattr(measure, "source_label", "") or measure.measure
+    return f"{measure.amount:g} {label} = {measure.gram_weight:g} g"
+
+
+_TOKEN = re.compile(r"[a-z0-9]+")
+
+
+def _tokens(text):
+    return set(_TOKEN.findall(str(text or "").casefold()))
+
+
+def _choose_measure(candidates, unit, context=""):
+    """Pick the measure that best fits the recipe line.
+
+    USDA often has several portions for one unit: "cup, chopped" and "cup,
+    sliced", or a small/medium/large egg. Matching preparation and shape words
+    from the recipe line is the strongest signal. Confidence and USDA's
+    portion order break the remaining ties. A tie between different weights is
+    reported as ambiguous rather than hidden.
+    """
+    context_tokens = _tokens(context)
+    scored = []
+    for measure in candidates:
+        label_tokens = _tokens(
+            f"{getattr(measure, 'source_label', '')} "
+            f"{getattr(measure, 'preparation_state', '')}"
+        )
+        overlap = context_tokens & label_tokens
+        score = (
+            _measure_confidence(measure) * 2
+            + len(overlap) * 3
+            + (5 if measure.measure == unit else 0)
+            - getattr(measure, "sequence", 0) * 0.001
+        )
+        scored.append((score, measure))
+
+    scored.sort(
+        key=lambda item: (
+            -item[0],
+            getattr(item[1], "sequence", 0),
+            getattr(item[1], "pk", 0) or 0,
+        )
+    )
+    best_score, best = scored[0]
+    ambiguous = any(
+        score > best_score - 0.25
+        and abs(measure.gram_weight - best.gram_weight) > 0.5
+        for score, measure in scored[1:]
+    )
+    return best, ambiguous
+
+
+def _convert_measures(measures, unit, amount, context=""):
+    """Grams for ``amount`` of ``unit`` using only the ingredient's measures."""
+    if not amount or amount <= 0:
+        return None
+
+    measures = list(measures)
+    if unit in MASS_UNITS:
+        return Conversion(
+            amount * MASS_IN_GRAMS[unit], 1.0, "mass", f"{amount:g} {unit}"
+        )
+
+    if unit in VOLUME_UNITS:
+        exact = [measure for measure in measures if measure.measure == unit]
+        if exact:
+            measure, ambiguous = _choose_measure(exact, unit, context)
+            return Conversion(
+                _scaled(measure, amount),
+                min(1.0, _measure_confidence(measure)),
+                "measure",
+                _measure_label(measure),
+                ambiguous,
+            )
+        volumes = [measure for measure in measures if measure.measure in VOLUME_UNITS]
+        if volumes:
+            measure, ambiguous = _choose_measure(volumes, unit, context)
+            wanted_ml = amount * VOLUME_IN_ML[unit]
+            # The measure carries USDA's own density for this food, so a
+            # different volume unit still converts through it. A little
+            # confidence is lost because the recipe did not ask for the
+            # portion USDA measured.
+            return Conversion(
+                _scaled(measure, wanted_ml / VOLUME_IN_ML[measure.measure]),
+                min(1.0, _measure_confidence(measure) * 0.95),
+                "volume-measure",
+                _measure_label(measure),
+                ambiguous,
+            )
+        return None
+
+    if unit is None:
+        counts = [
+            measure
+            for measure in measures
+            if measure.measure not in MASS_UNITS
+            and measure.measure not in VOLUME_UNITS
+        ]
+        if counts:
+            measure, ambiguous = _choose_measure(counts, unit, context)
+            return Conversion(
+                _scaled(measure, amount),
+                min(1.0, _measure_confidence(measure) * 0.9),
+                "count-measure",
+                _measure_label(measure),
+                ambiguous,
+            )
+        return None
+
+    if unit in COUNT_UNITS:
+        exact = [measure for measure in measures if measure.measure == unit]
+        if exact:
+            measure, ambiguous = _choose_measure(exact, unit, context)
+            return Conversion(
+                _scaled(measure, amount),
+                min(1.0, _measure_confidence(measure)),
+                "count-measure",
+                _measure_label(measure),
+                ambiguous,
+            )
+    return None
+
+
 def grams_for(measures, unit, amount):
     """Grams for ``amount`` of ``unit`` from an iterable of measures.
 
     Measures are objects with ``measure``, ``amount`` and ``gram_weight``.
-    Returns None when nothing converts, which is the signal to report the line
-    rather than to invent a number: count words and empty units only convert
-    on an exact measure of the same unit, and a volume needs a volume measure
-    for this ingredient.
+    Returns None when nothing converts. This is the strict, ingredient-level
+    conversion used by callers that only have a measure list; the recipe
+    calculator uses :func:`resolve_grams`, which can fall back to a standard
+    cooking weight and carries confidence and provenance.
     """
+    conversion = _convert_measures(measures, unit, amount)
+    return conversion.grams if conversion is not None else None
+
+
+def resolve_grams(ingredient, quantity, context=""):
+    """Grams for ``quantity`` of ``ingredient``, with confidence and method.
+
+    The order is deliberate: a mass printed on the recipe line, then a matching
+    USDA measure, then a standard cooking weight. The first two are measured
+    data. The last is an estimate and is flagged as one.
+    """
+    if quantity.grams is not None and quantity.grams > 0:
+        return Conversion(
+            quantity.grams,
+            1.0,
+            "stated",
+            quantity.note or "mass stated on the line",
+        )
+
+    amount = quantity.amount
     if not amount or amount <= 0:
         return None
-    measures = list(measures)
-    for measure in measures:
-        if measure.measure == unit:
-            return _scaled(measure, amount)
-    if unit in MASS_UNITS:
-        return amount * MASS_IN_GRAMS[unit]
+
+    measures = list(ingredient.measures.all())
+    conversion = _convert_measures(measures, quantity.unit, amount, context)
+    if conversion is not None:
+        return conversion
+
+    unit = quantity.unit
+    name = ingredient.name
     if unit in VOLUME_UNITS:
-        wanted_ml = amount * VOLUME_IN_ML[unit]
-        for measure in measures:
-            if measure.measure in VOLUME_UNITS:
-                return _scaled(measure, wanted_ml / VOLUME_IN_ML[measure.measure])
+        grams = grams_for_volume(name, context, amount * VOLUME_IN_ML[unit])
+        if grams is not None:
+            return Conversion(
+                grams,
+                0.55,
+                "standard-density",
+                "standard cooking density",
+            )
+    elif unit in SMALL_UNIT_GRAMS:
+        grams = grams_for_unit(unit, amount)
+        if grams is not None:
+            return Conversion(
+                grams,
+                0.45,
+                "standard-unit",
+                f"standard {unit} weight",
+            )
+    elif (unit is None or unit in SIZE_UNITS or unit in COUNT_UNITS) and (
+        unit not in CONTAINER_UNITS
+    ):
+        grams = grams_for_count(name, context, amount, unit)
+        if grams is not None:
+            return Conversion(
+                grams,
+                0.50,
+                "standard-count",
+                "standard item weight",
+            )
     return None
 
 
@@ -204,57 +438,223 @@ UNICODE_FRACTIONS = {
     "⅓": " 1/3", "⅔": " 2/3",
 }
 
-QUANTITY = re.compile(
-    r"""^\s*
- (?:
-      (?P<integer>\d+)\s+(?P<mixed>\d+)\s*/\s*(?P<mixed_den>\d+)
-    | (?P<numerator>\d+)\s*/\s*(?P<denominator>\d+)
-    | (?P<decimal>\d+(?:\.\d+)?|\.\d+)
-    )
-    """,
-    re.VERBOSE,
+NUMBER_WORDS = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
+    "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11,
+    "twelve": 12, "dozen": 12, "half": 0.5, "quarter": 0.25,
+}
+NUMBER_NUMERIC = r"\d+\s+\d+\s*/\s*\d+|\d+\s*/\s*\d+|\d+(?:\.\d+)?|\.\d+"
+NUMBER_WORD_TEXT = (
+    r"one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve"
+    r"|dozen|half|quarter"
 )
+NUMBER_TEXT = f"(?:{NUMBER_NUMERIC}|{NUMBER_WORD_TEXT})"
+# Numeric amounts may run straight into a unit ("33cl"); word amounts must end
+# at a word boundary so "onehalf" is not read as one.
+QUANTITY = re.compile(
+    r"^\s*(?P<number>(?:" + NUMBER_NUMERIC + r")|(?:" + NUMBER_WORD_TEXT + r")(?![a-z]))",
+    re.I,
+)
+RANGE = re.compile(r"^\s*(?:-|–|—|\bto\b|\bor\b)\s*", re.I)
 UNIT_WORD = re.compile(r"^\s*([A-Za-z]+)")
+LEADING_FILLER = re.compile(
+    r"^\s*(?:(?:about|approximately|approx\.?|around|roughly|circa)\s+|~|≈)+",
+    re.I,
+)
+
+# A fraction printed with a hyphen ("1-1/2") is a mixed number, not a range.
+# A range ("2-4 Tbsp") has no slash after the second number and is left alone.
+HYPHEN_FRACTION = re.compile(r"(?<=\d)\s*[-–—]\s*(?=\d+\s*/\s*\d+)")
+
+MASS_TOKEN = re.compile(
+    r"(?P<value>" + NUMBER_TEXT + r")\s*[-–—]?\s*"
+    r"(?P<unit>milligrams?|kilograms?|grams?|ounces?|pounds?|oz|lbs?|kg|mg|g)\b",
+    re.I,
+)
+MASS_WORDS = {
+    "mg": 0.001, "milligram": 0.001, "milligrams": 0.001,
+    "g": 1.0, "gram": 1.0, "grams": 1.0,
+    "kg": 1000.0, "kilogram": 1000.0, "kilograms": 1000.0,
+    "oz": 28.3495, "ounce": 28.3495, "ounces": 28.3495,
+    "lb": 453.592, "lbs": 453.592, "pound": 453.592, "pounds": 453.592,
+}
+PARENTHETICAL = re.compile(r"\(([^)]*)\)")
+PER_ITEM = re.compile(r"\b(?:each|per)\b", re.I)
+CONTAINER_AFTER = re.compile(
+    r"^\s*(?:cans?|jars?|packages?|pkg|bags?|boxes?|cartons?|"
+    r"containers?|bottles?|envelopes?|packets?|sticks?|loaves?|loaf)\b",
+    re.I,
+)
+CONTAINER_AFTER_MASS = re.compile(
+    r"^\s*[- ]?\s*(?:cans?|jars?|packages?|pkg|bags?|boxes?|cartons?|"
+    r"containers?|bottles?|envelopes?|packets?|sticks?|loaves?|loaf)\b",
+    re.I,
+)
 
 # Things a recipe uses to connect an amount to an ingredient, not measures.
-ARTICLES = frozenset({"of"})
+ARTICLES = frozenset({"of", "a", "an"})
 
 
-def parse_amount(text):
-    """Split the head of an ingredient line into ``(amount, unit, rest)``.
+def _number(token):
+    """Float value for a number token, or None when it is not one."""
+    text = " ".join(str(token or "").split()).lower()
+    if not text:
+        return None
+    if text in NUMBER_WORDS:
+        return float(NUMBER_WORDS[text])
+    if " " in text:
+        whole, fraction = text.split(None, 1)
+        try:
+            return float(whole) + _number(fraction)
+        except (TypeError, ValueError):
+            return None
+    if "/" in text:
+        numerator, denominator = text.split("/", 1)
+        try:
+            denominator = float(denominator)
+            return float(numerator) / denominator if denominator else None
+        except ValueError:
+            return None
+    try:
+        return float(text)
+    except ValueError:
+        return None
 
-    Reads the number first -- integers, decimals and fractions, whether ASCII
-    or the unicode glyphs recipes are written in -- then the next word when it
-    names a measure. Lines without a number, like "salt to taste", come back
-    as ``(None, None, line)`` and are reported rather than guessed at.
+
+def _mass_token(token):
+    value = _number(token.group("value"))
+    if value is None:
+        return None
+    unit = token.group("unit").casefold()
+    factor = MASS_WORDS.get(unit)
+    return None if factor is None else value * factor
+
+
+def _mass_grams(text):
+    """Sum every mass phrase in ``text``; "1 lb 5 oz" is one compound mass."""
+    total = None
+    for token in MASS_TOKEN.finditer(str(text or "")):
+        grams = _mass_token(token)
+        if grams is None:
+            continue
+        total = grams if total is None else total + grams
+    return total
+
+
+def _mass_after_or(rest, _amount=None):
+    match = re.search(r"\bor\b", rest, re.I)
+    if not match:
+        return None
+    return _mass_grams(rest[match.end():])
+
+
+def _mass_in_parentheses(rest, amount):
+    for match in PARENTHETICAL.finditer(rest):
+        grams = _mass_grams(match.group(1))
+        if grams is None:
+            continue
+        after = rest[match.end():]
+        per_item = bool(PER_ITEM.search(match.group(1))) or bool(
+            CONTAINER_AFTER.match(after)
+        )
+        return grams * amount if per_item else grams
+    return None
+
+
+def _mass_with_each(rest, amount):
+    for token in MASS_TOKEN.finditer(rest):
+        if re.match(r"\s*(?:each|per)\b", rest[token.end():], re.I):
+            grams = _mass_token(token)
+            if grams is not None:
+                return grams * amount
+    return None
+
+
+def _mass_after_multiplier(rest, amount):
+    match = re.search(r"[x×]\s*", rest, re.I)
+    if not match:
+        return None
+    grams = _mass_grams(rest[match.end():])
+    return None if grams is None else grams * amount
+
+
+def _mass_before_container(rest, amount):
+    for token in MASS_TOKEN.finditer(rest):
+        if CONTAINER_AFTER_MASS.match(rest[token.end():]):
+            grams = _mass_token(token)
+            if grams is not None:
+                return grams * amount
+    return None
+
+
+def _explicit_grams(rest, amount, unit):
+    """A mass the line states outright, in grams, and where it came from."""
+    if unit in MASS_UNITS:
+        # "1 lb 5 oz" is a compound mass: the first part is the parsed unit and
+        # the rest continues the same measurement.
+        extra = _mass_grams(rest)
+        if extra is not None:
+            return amount * MASS_IN_GRAMS[unit] + extra, "compound mass"
+
+    for finder, note in (
+        (_mass_after_or, "mass alternative"),
+        (lambda text, count: _mass_in_parentheses(text, count), "mass in parentheses"),
+        (_mass_with_each, "per-item mass"),
+        (_mass_after_multiplier, "multiplied package mass"),
+        (_mass_before_container, "container mass"),
+    ):
+        grams = finder(rest, amount)
+        if grams is not None:
+            return grams, note
+    return None
+
+
+def parse_quantity(text):
+    """Parse the head of an ingredient line into a :class:`Quantity`.
+
+    Handles numbers, fractions, unicode glyphs, ranges, count words, and a mass
+    printed elsewhere on the line. A range becomes its midpoint, which keeps
+    the estimate unbiased; the original bounds stay on the result. A line with
+    no number, like "salt to taste", comes back with ``amount`` None so the
+    caller can report it instead of inventing a serving.
     """
     if not text:
-        return None, None, ""
+        return Quantity(None, None, "")
+
     expanded = str(text)
     for glyph, replacement in UNICODE_FRACTIONS.items():
         expanded = expanded.replace(glyph, replacement)
+    expanded = HYPHEN_FRACTION.sub(" ", expanded)
     expanded = " ".join(expanded.split())
+    expanded = LEADING_FILLER.sub("", expanded)
+
     match = QUANTITY.match(expanded)
     if not match:
-        return None, None, expanded
+        return Quantity(None, None, expanded)
 
-    if match.group("integer") is not None:
-        numerator = int(match.group("mixed"))
-        denominator = int(match.group("mixed_den"))
-        amount = int(match.group("integer")) + (
-            numerator / denominator if denominator else 0.0
-        )
-    elif match.group("numerator") is not None:
-        numerator = int(match.group("numerator"))
-        denominator = int(match.group("denominator"))
-        amount = numerator / denominator if denominator else 0.0
-    else:
-        amount = float(match.group("decimal"))
+    low = _number(match.group("number"))
+    if low is None:
+        return Quantity(None, None, expanded)
 
     rest = expanded[match.end():]
+    high = low
+    range_match = RANGE.match(rest)
+    if range_match:
+        end_match = QUANTITY.match(rest[range_match.end():])
+        if end_match:
+            end_high = _number(end_match.group("number"))
+            if end_high is not None:
+                high = end_high
+                rest = rest[range_match.end() + end_match.end():]
+
+    amount = (low + high) / 2
+    note = "range midpoint" if high != low else ""
+
     unit = None
-    word = UNIT_WORD.match(rest)
-    if word:
+    while True:
+        word = UNIT_WORD.match(rest)
+        if not word:
+            break
         token = word.group(1)
         following = UNIT_WORD.match(rest[word.end():])
         # A lone capital between the number and a real measure is a garbled
@@ -275,8 +675,34 @@ def parse_amount(text):
         if canonical:
             unit = canonical
             rest = rest[word.end():]
+            break
+        # "half a cup" and "a pinch of salt" put a connector before the unit.
+        if token.lower() in ARTICLES:
+            rest = rest[word.end():]
+            continue
+        break
+
+    explicit = _explicit_grams(rest, amount, unit)
+    grams = None
+    if explicit is not None:
+        grams, mass_note = explicit
+        note = f"{note}; {mass_note}" if note else mass_note
 
     words = rest.split()
     if words and words[0].lower() in ARTICLES and len(words) > 1:
         words = words[1:]
-    return amount, unit, " ".join(words)
+    return Quantity(
+        amount,
+        unit,
+        " ".join(words),
+        low=low,
+        high=high,
+        grams=grams,
+        note=note,
+    )
+
+
+def parse_amount(text):
+    """Split the head of an ingredient line into ``(amount, unit, rest)``."""
+    quantity = parse_quantity(text)
+    return quantity.amount, quantity.unit, quantity.rest

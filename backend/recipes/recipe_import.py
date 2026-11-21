@@ -11,9 +11,10 @@ an exact hit; a card name that matches nothing is created on its own, because a
 recipe is more useful with an unresolved nutrition line than with a missing
 ingredient.
 
-Nutrition comes from the card's printed "Nutrients Per Serving" panel when the
-card has one, and only falls back to recomputing from USDA measures when it
-does not.
+Nutrition is always computed from the ingredient lines, so every recipe is
+measured the same way. When a card prints a "Nutrients Per Serving" panel, the
+values are stored as a ``NutritionReference`` and used as ground truth by
+``validate_nutrition``; they are not served as the recipe's figure.
 """
 
 from collections import namedtuple
@@ -23,8 +24,15 @@ from django.utils.text import slugify
 
 from .directions import directions_text
 from .matching import IngredientIndex
-from .models import NUTRIENT_FIELDS, Ingredient, Nutrition, Recipe, RecipeIngredient
-from .nutrition import compute
+from .models import (
+    NUTRIENT_FIELDS,
+    Ingredient,
+    Nutrition,
+    NutritionReference,
+    Recipe,
+    RecipeIngredient,
+)
+from .nutrition import apply_line_conversions, compute
 from .pdf import split_quantity
 
 NAME_MAX_LENGTH = Ingredient._meta.get_field("name").max_length
@@ -125,17 +133,17 @@ def _ingredient_lines(data):
 
 
 def _source_nutrition(data):
-    """The printed panel as a Nutrition-ready dict, or None when absent.
+    """The printed panel as a NutritionReference-ready dict, or None.
 
     Only the five tracked fields are read; a card with no calorie line is
     treated as having no panel, because calories are the anchor of the panel.
+    The published panel is always computed, so these values are kept beside it
+    as ground truth for validation, not served as the recipe's nutrition.
     """
     nutrients = data.get("nutrients") or {}
     if "kcal" not in nutrients:
         return None
-    values = {field: float(nutrients.get(field) or 0.0) for field in NUTRIENT_FIELDS}
-    values["method"] = "source"
-    return values
+    return {field: float(nutrients.get(field) or 0.0) for field in NUTRIENT_FIELDS}
 
 
 METADATA_FIELDS = (
@@ -195,6 +203,7 @@ def save_recipe(data, slug=None, dry_run=False, metadata=None):
         recipe.save()
 
         RecipeIngredient.objects.filter(recipe=recipe).delete()
+        rows = []
         pairs = []
         unmatched = []
         for position, (quantity, name) in enumerate(lines, start=1):
@@ -203,20 +212,38 @@ def save_recipe(data, slug=None, dry_run=False, metadata=None):
                 continue
             if not matched:
                 unmatched.append((normalize_name(name), quantity))
-            RecipeIngredient.objects.create(
+            row = RecipeIngredient.objects.create(
                 recipe=recipe,
                 ingredient=ingredient,
                 quantity_text=quantity,
+                raw_text=normalize_name(name),
                 position=position,
             )
-            pairs.append((ingredient, quantity))
+            rows.append(row)
+            # The card wording carries preparation and shape clues ("penne",
+            # "sliced") that the canonical USDA name may not, so it is the
+            # context for choosing between that food's household measures.
+            pairs.append((ingredient, quantity, normalize_name(name)))
 
-        computed = compute(pairs, servings or 1)
+        # Every recipe is measured from its ingredients, including one that
+        # prints its own panel. The printed values become the reference that
+        # validate_nutrition scores this calculation against.
         if source_nutrition is not None:
-            Nutrition.objects.update_or_create(
+            NutritionReference.objects.update_or_create(
                 recipe=recipe, defaults=source_nutrition
             )
-        elif computed.lines_used and servings and computed.totals["kcal"] > 0:
+        else:
+            NutritionReference.objects.filter(recipe=recipe).delete()
+
+        computed = compute(pairs, servings)
+        # Store the mass behind every line, including lines whose nutrition is
+        # missing: the conversion is still useful for display and for auditing
+        # which ingredient data would unlock the line.
+        if rows:
+            fields = apply_line_conversions(computed, rows)
+            RecipeIngredient.objects.bulk_update(rows, fields)
+
+        if computed.lines_used and servings and computed.totals["kcal"] > 0:
             # A partial sum can only undercount the dish, so it is stored and
             # presented as a lower bound rather than as the final figure. A
             # sum of zero means only salt, water or spices converted; that is
@@ -228,6 +255,9 @@ def save_recipe(data, slug=None, dry_run=False, metadata=None):
                     "method": "computed",
                     "lines_used": computed.lines_used,
                     "lines_total": computed.lines_total,
+                    "weight_g": computed.weight_g,
+                    "confidence": computed.confidence,
+                    "warnings": computed.warnings,
                 },
             )
         else:
