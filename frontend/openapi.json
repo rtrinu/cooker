@@ -669,6 +669,30 @@
             "default": 0,
             "title": "Lines Total",
             "type": "integer"
+          },
+          "weight_g": {
+            "default": 0,
+            "title": "Weight G",
+            "type": "number"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "warnings": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
           }
         },
         "required": [
@@ -1119,6 +1143,38 @@
           "position": {
             "title": "Position",
             "type": "integer"
+          },
+          "grams": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grams"
+          },
+          "grams_method": {
+            "default": "",
+            "title": "Grams Method",
+            "type": "string"
+          },
+          "grams_detail": {
+            "default": "",
+            "title": "Grams Detail",
+            "type": "string"
+          },
+          "grams_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grams Confidence"
           }
         },
         "required": [

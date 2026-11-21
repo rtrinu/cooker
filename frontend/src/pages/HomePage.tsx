@@ -76,10 +76,17 @@ export default function HomePage() {
       .slice(0, 6)
   })()
 
-  const example = featuredRecipes.find((recipe) => recipe.nutrition)
-  const examplePartial =
-    example?.nutrition?.method === 'computed' &&
-    example.nutrition.lines_used < example.nutrition.lines_total
+  const featuredExample = featuredRecipes.find((recipe) => recipe.nutrition)
+  // The first alphabetical page can have no computed nutrition at all, so
+  // fall back to the next page to keep the worked example populated.
+  const nutritionExample = useQuery({
+    queryKey: ['recipes', 'home', 'nutrition-example'],
+    queryFn: () => getRecipes({ page: 2, pageSize: 100 }),
+    enabled: recipes.isSuccess && !featuredExample,
+  })
+  const example =
+    featuredExample ??
+    nutritionExample.data?.items.find((recipe) => recipe.nutrition)
   const exampleHref = example
     ? `/recipes/${example.slug ?? example.id}`
     : undefined
@@ -217,7 +224,8 @@ export default function HomePage() {
             </h2>
             <p className="mt-4 max-w-md text-body text-field/70">
               Calories, protein, fat and fibre sit beside the ingredients.
-              Estimated figures say how many ingredients they used.
+              Each panel says how many ingredients it measured, how much they
+              weighed and how confident the match is.
             </p>
           </div>
           <div className="lg:col-span-6">
@@ -234,7 +242,6 @@ export default function HomePage() {
                   <NutritionFacts
                     nutrition={example.nutrition!}
                     servings={example.servings}
-                    partial={examplePartial}
                     inverse
                   />
                 </div>

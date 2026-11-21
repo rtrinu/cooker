@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { FinderRecipe } from '../api/client'
 import { taxonomyLabel } from '../lib/labels'
+import { isPartialNutrition } from '../lib/nutrition'
 
 const MACROS = [
   ['Calories', 'kcal', 'kcal'],
@@ -26,9 +27,9 @@ export default function FinderResultCard({
   const missing = hit.missing.slice(0, 4)
   const remaining = hit.missing.length - missing.length
   const filled = Math.round(hit.pantry_coverage * 10)
-  const partial =
-    recipe.nutrition?.method === 'computed' &&
-    recipe.nutrition.lines_used < recipe.nutrition.lines_total
+  const partial = recipe.nutrition
+    ? isPartialNutrition(recipe.nutrition)
+    : false
 
   return (
     <Link

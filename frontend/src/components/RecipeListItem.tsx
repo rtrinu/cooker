@@ -1,12 +1,11 @@
 import { Link } from 'react-router-dom'
 import type { RecipeList } from '../api/client'
 import { taxonomyLabel } from '../lib/labels'
+import { isPartialNutrition } from '../lib/nutrition'
 
 export default function RecipeListItem({ recipe }: { recipe: RecipeList }) {
   const target = recipe.slug ? `/recipes/${recipe.slug}` : `/recipes/${recipe.id}`
-  const partial =
-    recipe.nutrition?.method === 'computed' &&
-    recipe.nutrition.lines_used < recipe.nutrition.lines_total
+  const partial = recipe.nutrition ? isPartialNutrition(recipe.nutrition) : false
   const facets = [recipe.category, recipe.cuisine]
     .filter(Boolean)
     .map(taxonomyLabel)

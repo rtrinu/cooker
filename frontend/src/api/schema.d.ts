@@ -231,6 +231,18 @@ export interface components {
              * @default 0
              */
             lines_total: number;
+            /**
+             * Weight G
+             * @default 0
+             */
+            weight_g: number;
+            /** Confidence */
+            confidence?: number | null;
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: string[];
         };
         /** PagedRecipeListOut */
         PagedRecipeListOut: {
@@ -372,6 +384,20 @@ export interface components {
             raw_text: string;
             /** Position */
             position: number;
+            /** Grams */
+            grams?: number | null;
+            /**
+             * Grams Method
+             * @default
+             */
+            grams_method: string;
+            /**
+             * Grams Detail
+             * @default
+             */
+            grams_detail: string;
+            /** Grams Confidence */
+            grams_confidence?: number | null;
         };
         /** PagedIngredientOut */
         PagedIngredientOut: {

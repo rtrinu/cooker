@@ -5,6 +5,7 @@ import { ButtonLink } from '../components/Button'
 import { ErrorState, LoadingRows } from '../components/DataState'
 import NutritionFacts from '../components/NutritionFacts'
 import { licenseLabel, taxonomyLabel } from '../lib/labels'
+import { formatWeight, nutritionWarnings } from '../lib/nutrition'
 import { splitPantry, termsTouch } from '../lib/pantry'
 import { usePageTitle } from '../lib/usePageTitle'
 
@@ -68,14 +69,24 @@ export default function RecipeDetailPage() {
     timing,
     data.cuisine ? taxonomyLabel(data.cuisine) : '',
   ].filter(Boolean)
-  const nutritionPartial =
-    data.nutrition?.method === 'computed' &&
-    data.nutrition.lines_used < data.nutrition.lines_total
+  const nutritionFlags = data.nutrition
+    ? nutritionWarnings(data.nutrition)
+    : []
+  const nutritionPrimary =
+    nutritionFlags.find(
+      (flag) =>
+        flag.code === 'macro-mismatch' ||
+        flag.code === 'implausible-energy-density',
+    ) ??
+    nutritionFlags.find((flag) => flag.code === 'partial') ??
+    nutritionFlags.find((flag) => flag.code === 'low-confidence') ??
+    null
+  const nutritionNotes = nutritionFlags.filter(
+    (flag) => flag !== nutritionPrimary,
+  )
   const nutritionNote = data.nutrition
     ? data.nutrition.method === 'computed'
-      ? nutritionPartial
-        ? `Lower bound: only ${data.nutrition.lines_used} of ${data.nutrition.lines_total} ingredients could be measured.`
-        : `Estimated from all ${data.nutrition.lines_total} ingredients.`
+      ? 'Calculated from the ingredient list, not a lab test.'
       : 'From the recipe’s printed nutrition panel.'
     : ''
   const pantryActive = pantryTerms.length > 0
@@ -203,8 +214,18 @@ export default function RecipeDetailPage() {
                         key={item.id}
                         className="flex items-start gap-4 px-2 py-2 odd:bg-field/5"
                       >
-                        <span className="w-20 shrink-0 text-small tabular-nums text-field/60">
-                          {item.quantity_text || '—'}
+                        <span className="w-24 shrink-0 text-small tabular-nums text-field/60">
+                          <span className="block">
+                            {item.quantity_text || '—'}
+                          </span>
+                          {item.grams != null && (
+                            <span
+                              className="block text-field/50"
+                              title={item.grams_detail || undefined}
+                            >
+                              {formatWeight(item.grams)}
+                            </span>
+                          )}
                         </span>
                         <span className="min-w-0 flex-1 text-body font-semibold">
                           {item.ingredient.name}
@@ -248,16 +269,58 @@ export default function RecipeDetailPage() {
                       <NutritionFacts
                         nutrition={data.nutrition}
                         servings={data.servings}
-                        partial={nutritionPartial}
                         inverse
                       />
                     </div>
-                    <p className="mt-8 text-small text-field/60">
+                    <p className="mt-6 text-small text-field/60">
                       {data.servings
                         ? 'Per serving and for the whole recipe. '
                         : 'Per serving. Whole-recipe totals need a serving count. '}
                       {nutritionNote}
                     </p>
+
+                    {nutritionPrimary && (
+                      <p className="mt-3 text-small text-heat">
+                        <span className="font-semibold">
+                          {nutritionPrimary.label}.
+                        </span>{' '}
+                        {nutritionPrimary.code === 'partial'
+                          ? `Only ${data.nutrition.lines_used} of ${data.nutrition.lines_total} ingredients could be measured.`
+                          : nutritionPrimary.detail}
+                      </p>
+                    )}
+
+                    {nutritionNotes.length > 0 && (
+                      <details className="group mt-5 border-t border-field/15 pt-5">
+                        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 text-small font-semibold text-field/80 [&::-webkit-details-marker]:hidden">
+                          <span>
+                            How this estimate was built
+                            {nutritionNotes.length > 1
+                              ? ` (${nutritionNotes.length} notes)`
+                              : ''}
+                          </span>
+                          <span
+                            aria-hidden="true"
+                            className="text-lead leading-none text-heat transition-transform group-open:rotate-45"
+                          >
+                            +
+                          </span>
+                        </summary>
+                        <ul className="mt-2 space-y-3">
+                          {nutritionNotes.map((flag) => (
+                            <li
+                              key={flag.code}
+                              className="text-small text-field/70"
+                            >
+                              <span className="font-semibold text-field/90">
+                                {flag.label}.
+                              </span>{' '}
+                              {flag.detail}
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
                   </>
                 ) : (
                   <p className="mt-4 text-small text-field/70">

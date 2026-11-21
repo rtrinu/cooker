@@ -124,7 +124,10 @@ export default function DataPage() {
           <h2 className="font-display text-head">Nutrition.</h2>
           <p className="mt-4 max-w-xl text-body text-ink/80">
             Nutrition is matched to ingredients, converted to grams and summed.
-            Missing values stay missing; they are never counted as zero.
+            Missing values stay missing; they are never counted as zero. Every
+            panel records how many ingredients converted, the weight those lines
+            represent and a confidence score. Warnings name any ambiguous
+            measures or failed sanity checks.
           </p>
 
           <ul className="mt-10 divide-y-2 divide-ink/15 border-y-2 border-ink/15">
