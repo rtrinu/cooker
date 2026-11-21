@@ -174,7 +174,6 @@ def clean_directions(lines):
     if not cleaned:
         return []
 
-    has_numbers = any(marked for _, marked in cleaned)
     steps = []
     for text, marked in cleaned:
         if marked:
@@ -184,18 +183,15 @@ def clean_directions(lines):
             steps.append(text)
             continue
         previous = steps[-1]
-        # In a numbered sequence every unnumbered line is a continuation of
-        # the step above it. In unmarked prose the line break usually *is* the
-        # step boundary: old cookbooks write one short instruction per line.
-        # Only glue a line back when it looks like a wrapped paragraph -- the
-        # previous line is long and unfinished and this one opens in lowercase.
-        if has_numbers:
-            steps[-1] = f"{previous} {text}"
-        elif (
-            not TERMINAL.search(previous)
-            and len(previous) >= WRAPPED_LINE
-            and LOWERCASE_START.match(text)
-        ):
+        # A line break is a step boundary unless the next line looks like a
+        # wrapped paragraph: it opens in lowercase, or the previous line is a
+        # long sentence that has not finished. Even in a numbered sequence a
+        # new capitalised sentence after a full stop is its own step; the PDF
+        # cards print one numbered instruction and then continue unnumbered.
+        wrapped = bool(LOWERCASE_START.match(text)) or (
+            not TERMINAL.search(previous) and len(previous) >= WRAPPED_LINE
+        )
+        if wrapped:
             steps[-1] = f"{previous} {text}"
         else:
             steps.append(text)
